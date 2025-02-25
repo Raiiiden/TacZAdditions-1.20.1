@@ -1,0 +1,12 @@
+{
+  "required": true,
+  "package": "com.raiiiden.taczadditions.mixin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "taczadditions.refmap.json",
+  "mixins": [],
+  "client": [
+    "CombinedSwayMixin",
+    "FirstPersonRenderGunEventInvoker"
+  ],
+  "minVersion": "0.8.5"
+}
