@@ -15,8 +15,8 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 public class CombinedSwayMixin {
 
     // ----- Translation multipliers -----
-    private static final float DEFAULT_MULTIPLIER = 2.0F;
-    private static final float AIM_MULTIPLIER = 15.0F;
+    private static final float DEFAULT_MULTIPLIER = 1.5F;
+    private static final float AIM_MULTIPLIER = 10.0F;
     private static final float SMOOTHING_FACTOR = 0.04F;
     private static float lastMultiplier = DEFAULT_MULTIPLIER;
 

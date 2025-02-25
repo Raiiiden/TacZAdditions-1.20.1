@@ -6,7 +6,8 @@
   "mixins": [],
   "client": [
     "CombinedSwayMixin",
-    "FirstPersonRenderGunEventInvoker"
+    "FirstPersonRenderGunEventInvoker",
+    "NoRecoilRecoveryMixin"
   ],
   "minVersion": "0.8.5"
 }
