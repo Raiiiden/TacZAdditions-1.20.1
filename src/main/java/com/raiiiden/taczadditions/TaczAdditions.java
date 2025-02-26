@@ -1,5 +1,6 @@
 package com.raiiiden.taczadditions;
 
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
@@ -9,12 +10,10 @@ public class TaczAdditions {
   public static final String MODID = "taczadditions";
 
   public TaczAdditions() {
-    // Register the client setup listener.
     FMLJavaModLoadingContext.get().getModEventBus().addListener(this::clientSetup);
+    TacZAdditionsConfig.registerConfigs();
   }
 
   private void clientSetup(FMLClientSetupEvent event) {
-    // Perform any client-specific setup here.
-    // Aim key handling is managed by the AimKey class (registered as an EventBusSubscriber).
   }
 }

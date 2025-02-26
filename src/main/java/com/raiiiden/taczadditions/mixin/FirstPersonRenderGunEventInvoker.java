@@ -9,6 +9,6 @@ import org.spongepowered.asm.mixin.gen.Invoker;
 public interface FirstPersonRenderGunEventInvoker {
     @Invoker(value = "applyShootSwayAndRotation", remap = false)
     static void callApplyShootSwayAndRotation(BedrockGunModel model, float aimingProgress) {
-        throw new AssertionError(); // This will be replaced at runtime.
+        throw new AssertionError();
     }
 }

@@ -4,6 +4,7 @@ import com.tacz.guns.client.event.FirstPersonRenderGunEvent;
 import com.tacz.guns.client.input.AimKey;
 import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.model.bedrock.BedrockPart;
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import org.spongepowered.asm.mixin.Mixin;
@@ -14,27 +15,48 @@ import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 @Mixin(FirstPersonRenderGunEvent.class)
 public class CombinedSwayMixin {
 
-    // ----- Translation multipliers -----
-    private static final float DEFAULT_MULTIPLIER = 1.5F;
-    private static final float AIM_MULTIPLIER = 10.0F;
-    private static final float SMOOTHING_FACTOR = 0.04F;
-    private static float lastMultiplier = DEFAULT_MULTIPLIER;
+    // ----- Translation Sway -----
+    // Default stuff
+    private static final float DEFAULT_DEFAULT_MULTIPLIER = 1.5F;
+    private static final float DEFAULT_AIM_MULTIPLIER = 6.0F;
+    private static final float DEFAULT_SMOOTHING_FACTOR = 0.045F;
+
+    //store the last smoothed multiplier (starting with default)
+    private static float lastMultiplier = DEFAULT_DEFAULT_MULTIPLIER;
 
     private static float getTargetMultiplier() {
-        return AimKey.AIM_KEY.isDown() ? AIM_MULTIPLIER : DEFAULT_MULTIPLIER;
+        float defaultMultiplier = DEFAULT_DEFAULT_MULTIPLIER;
+        float aimMultiplier = DEFAULT_AIM_MULTIPLIER;
+        try {
+            defaultMultiplier = TacZAdditionsConfig.CLIENT.defaultMultiplier.get().floatValue();
+        } catch (IllegalStateException e) {
+            // Use default if config isn't loaded
+        }
+        try {
+            aimMultiplier = TacZAdditionsConfig.CLIENT.aimMultiplier.get().floatValue();
+        } catch (IllegalStateException e) {
+        }
+        return AimKey.AIM_KEY.isDown() ? aimMultiplier : defaultMultiplier;
     }
 
     private static float getSmoothedMultiplier(float target) {
-        lastMultiplier += (target - lastMultiplier) * SMOOTHING_FACTOR;
+        float smoothingFactor = DEFAULT_SMOOTHING_FACTOR;
+        try {
+            smoothingFactor = TacZAdditionsConfig.CLIENT.smoothingFactor.get().floatValue();
+        } catch (IllegalStateException e) {
+        }
+        lastMultiplier += (target - lastMultiplier) * smoothingFactor;
         return lastMultiplier;
     }
 
     // ----- Extra Roll (Sideways Tilt) -----
-    private static final float HIPFIRE_ROLL_FACTOR = 0.5F; // Tilt intensity when not aiming
-    private static final float AIMING_ROLL_FACTOR = 1.5F; // Tilt intensity when aiming
-    private static final float ROLL_SENSITIVITY = 15.0F;
-    private static final float ROLL_SMOOTHING = 0.05F;
-    private static final float MAX_TILT_ANGLE = 30.0F;
+    // Default roll values
+    private static final float DEFAULT_HIPFIRE_ROLL_FACTOR = 0.5F;
+    private static final float DEFAULT_AIMING_ROLL_FACTOR = 1.5F;
+    private static final float DEFAULT_ROLL_SENSITIVITY = 15.0F;
+    private static final float DEFAULT_ROLL_SMOOTHING = 0.04F;
+    private static final float DEFAULT_MAX_TILT_ANGLE = 30.0F;
+
     private static float lastPlayerYaw = 0.0F;
     private static float currentRoll = 0.0F;
 
@@ -43,6 +65,17 @@ public class CombinedSwayMixin {
      */
     @Inject(method = "applyShootSwayAndRotation", at = @At("TAIL"), remap = false)
     private static void modifyShootingSway(BedrockGunModel model, float aimingProgress, CallbackInfo ci) {
+        // Check if camera sway is enabled. Default is true
+        boolean enableCameraSway = true;
+        try {
+            enableCameraSway = TacZAdditionsConfig.CLIENT.enableCameraSway.get();
+        } catch (IllegalStateException e) {
+            // use default
+        }
+        if (!enableCameraSway) {
+            return;
+        }
+
         // --- Translation Sway ---
         float targetMultiplier = getTargetMultiplier();
         float smoothedMultiplier = getSmoothedMultiplier(targetMultiplier);
@@ -55,25 +88,32 @@ public class CombinedSwayMixin {
         // --- Extra Roll (Sideways Tilt) ---
         LocalPlayer player = Minecraft.getInstance().player;
         if (player != null && root != null) {
-            // Get current view yaw
             float currentYaw = player.getViewYRot(1.0F);
-            float deltaYaw = currentYaw - lastPlayerYaw; // Compute yaw difference
-            lastPlayerYaw = currentYaw; // Store current yaw for next tick
+            float deltaYaw = currentYaw - lastPlayerYaw;
+            lastPlayerYaw = currentYaw;
 
-            // Determine the roll factor based on aiming state
-            float rollFactor = AimKey.AIM_KEY.isDown() ? AIMING_ROLL_FACTOR : HIPFIRE_ROLL_FACTOR;
+            float rollFactor = (AimKey.AIM_KEY.isDown() ? DEFAULT_AIMING_ROLL_FACTOR : DEFAULT_HIPFIRE_ROLL_FACTOR);
+            float rollSensitivity = DEFAULT_ROLL_SENSITIVITY;
+            float rollSmoothing = DEFAULT_ROLL_SMOOTHING;
+            float maxTilt = DEFAULT_MAX_TILT_ANGLE;
+            try {
+                rollFactor = AimKey.AIM_KEY.isDown() ? TacZAdditionsConfig.CLIENT.aimingRollFactor.get().floatValue() :
+                        TacZAdditionsConfig.CLIENT.hipfireRollFactor.get().floatValue();
+            } catch (IllegalStateException e) { }
+            try {
+                rollSensitivity = TacZAdditionsConfig.CLIENT.rollSensitivity.get().floatValue();
+            } catch (IllegalStateException e) { }
+            try {
+                rollSmoothing = TacZAdditionsConfig.CLIENT.rollSmoothing.get().floatValue();
+            } catch (IllegalStateException e) { }
+            try {
+                maxTilt = TacZAdditionsConfig.CLIENT.maxTiltAngle.get().floatValue();
+            } catch (IllegalStateException e) { }
 
-            // Compute roll in degrees (negative to invert direction)
-            float targetRoll = -deltaYaw * rollFactor * ROLL_SENSITIVITY;
-
-            // Smooth the roll transition
-            currentRoll += (targetRoll - currentRoll) * ROLL_SMOOTHING;
-
-            // Clamp roll within max tilt range
-            if (currentRoll > MAX_TILT_ANGLE) currentRoll = MAX_TILT_ANGLE;
-            if (currentRoll < -MAX_TILT_ANGLE) currentRoll = -MAX_TILT_ANGLE;
-
-            // Apply rotation around Z-axis for tilt effect
+            float targetRoll = -deltaYaw * rollFactor * rollSensitivity;
+            currentRoll += (targetRoll - currentRoll) * rollSmoothing;
+            if (currentRoll > maxTilt) currentRoll = maxTilt;
+            if (currentRoll < -maxTilt) currentRoll = -maxTilt;
             root.additionalQuaternion.rotateZ((float) Math.toRadians(currentRoll));
         }
     }

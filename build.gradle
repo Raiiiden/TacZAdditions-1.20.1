@@ -139,6 +139,7 @@ repositories {
 dependencies {
     minecraft "net.neoforged:forge:${mc_version}-${neo_version}"
     implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:6069384")
+    implementation 'org.apache.commons:commons-math3:3.6.1'
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
     // For more info:
