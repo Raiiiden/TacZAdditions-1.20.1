@@ -14,6 +14,7 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -27,13 +28,15 @@ public class GunFireMixin {
     private void onGunFire(ShooterDataHolder dataHolder, ItemStack gunItem, Supplier<Float> pitch, Supplier<Float> yaw, LivingEntity shooter, CallbackInfo ci) {
         FireMode fireMode = ((ModernKineticGunItem) (Object) this).getFireMode(gunItem);
 
+        // Debug to find correct fire mode names
+        System.out.println("[DEBUG] Available FireMode values: " + Arrays.toString(FireMode.values()));
         System.out.println("[DEBUG] Gun fired in mode: " + fireMode.name());
 
-        if (fireMode.name().equalsIgnoreCase("SINGLE") || fireMode.name().equalsIgnoreCase("SEMI")) {
+        if (fireMode.name().equalsIgnoreCase("SINGLE") || fireMode.name().equalsIgnoreCase("SEMI") || fireMode.name().equalsIgnoreCase("SEMI_AUTO")) {
             MuzzleFlashRenderer.triggerFlash();
             return;
         }
-        if (fireMode.name().equalsIgnoreCase("AUTO")) {
+        if (fireMode.name().equalsIgnoreCase("AUTO") || fireMode.name().equalsIgnoreCase("FULL_AUTO")) {
             MuzzleFlashRenderer.triggerFlash();
             return;
         }
