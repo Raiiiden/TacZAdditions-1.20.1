@@ -39,25 +39,52 @@ public class MuzzleFlashRenderer {
         double distance = 1.0;
         Vec3 flashPosVec = eyePos.add(lookVec.scale(distance));
 
-        // Convert to block position with explicit casting
-        BlockPos flashPos = new BlockPos(
+        // Convert to block position
+        BlockPos initialPos = new BlockPos(
                 (int) Math.floor(flashPosVec.x),
                 (int) Math.floor(flashPosVec.y),
                 (int) Math.floor(flashPosVec.z)
         );
 
-        level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState(), 3);
+        // Find a valid air block within 3x3 area
+        BlockPos validFlashPos = findNearestAirBlock(level, initialPos);
+        if (validFlashPos == null) {
+            System.out.println("[DEBUG] No valid air block found for muzzle flash.");
+            return;
+        }
+
+        level.setBlock(validFlashPos, Blocks.LIGHT.defaultBlockState(), 3);
         synchronized (flashPositions) {
-            flashPositions.add(flashPos);
+            flashPositions.add(validFlashPos);
             flashTimes.add(System.currentTimeMillis());
         }
 
-        System.out.println("[DEBUG] Muzzle flash triggered at: " + flashPos);
+        System.out.println("[DEBUG] Muzzle flash triggered at: " + validFlashPos);
 
         if (!isRegistered) {
             MinecraftForge.EVENT_BUS.register(new MuzzleFlashRenderer());
             isRegistered = true;
         }
+    }
+
+    private static BlockPos findNearestAirBlock(Level level, BlockPos centerPos) {
+        // Check if the intended position is already air
+        if (level.getBlockState(centerPos).isAir()) {
+            return centerPos;
+        }
+
+        // Search for the closest air block in a 3x3 area
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                for (int dz = -1; dz <= 1; dz++) {
+                    BlockPos checkPos = centerPos.offset(dx, dy, dz);
+                    if (level.getBlockState(checkPos).isAir()) {
+                        return checkPos; // Return the first valid air block found
+                    }
+                }
+            }
+        }
+        return null; // No air block found within 3x3 area
     }
 
     @SubscribeEvent
