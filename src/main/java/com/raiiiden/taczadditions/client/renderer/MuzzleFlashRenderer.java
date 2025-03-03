@@ -12,11 +12,16 @@ import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
 
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.List;
+
 @OnlyIn(Dist.CLIENT)
 public class MuzzleFlashRenderer {
-    private static BlockPos lastFlashPos = null;
-    private static long flashStartTime = 0;
+    private static final List<BlockPos> flashPositions = new ArrayList<>(); // Stores all light block positions
+    private static final List<Long> flashTimes = new ArrayList<>(); // Stores timestamps for each block
     private static final long FLASH_DURATION_MS = 10; // 10ms muzzle flash
+    private static final long MAX_FLASH_LIFETIME_MS = 1000; // Safety removal after 1 second
 
     public static void triggerFlash() {
         Minecraft mc = Minecraft.getInstance();
@@ -41,29 +46,42 @@ public class MuzzleFlashRenderer {
 
         // Place the light block
         level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState(), 3);
-        lastFlashPos = flashPos;
-        flashStartTime = System.currentTimeMillis();
+        flashPositions.add(flashPos);
+        flashTimes.add(System.currentTimeMillis());
 
         System.out.println("[DEBUG] Muzzle flash triggered at: " + flashPos);
 
         // Register tick event for checking elapsed time
-        MinecraftForge.EVENT_BUS.register(MuzzleFlashRenderer.class);
-    }
-
-    @SubscribeEvent
-    public static void onClientTick(TickEvent.ClientTickEvent event) {
-        if (lastFlashPos != null && System.currentTimeMillis() - flashStartTime >= FLASH_DURATION_MS) {
-            removeFlash();
-            MinecraftForge.EVENT_BUS.unregister(MuzzleFlashRenderer.class); // Stop checking once removed
+        if (!MinecraftForge.EVENT_BUS.isRegistered(MuzzleFlashRenderer.class)) {
+            MinecraftForge.EVENT_BUS.register(new MuzzleFlashRenderer());
         }
     }
 
-    private static void removeFlash() {
+    @SubscribeEvent
+    public void onClientTick(TickEvent.ClientTickEvent event) {
+        if (flashPositions.isEmpty()) return;
+
+        long currentTime = System.currentTimeMillis();
+        Iterator<BlockPos> posIterator = flashPositions.iterator();
+        Iterator<Long> timeIterator = flashTimes.iterator();
+
+        while (posIterator.hasNext() && timeIterator.hasNext()) {
+            BlockPos flashPos = posIterator.next();
+            long flashTime = timeIterator.next();
+
+            if (currentTime - flashTime >= FLASH_DURATION_MS || currentTime - flashTime >= MAX_FLASH_LIFETIME_MS) {
+                removeFlash(flashPos);
+                posIterator.remove();
+                timeIterator.remove();
+            }
+        }
+    }
+
+    private static void removeFlash(BlockPos flashPos) {
         Minecraft mc = Minecraft.getInstance();
-        if (lastFlashPos != null && mc.level != null) {
-            mc.level.setBlock(lastFlashPos, Blocks.AIR.defaultBlockState(), 3);
-            System.out.println("[DEBUG] Light removed at: " + lastFlashPos);
-            lastFlashPos = null;
+        if (mc.level != null && mc.level.getBlockState(flashPos).getBlock() == Blocks.LIGHT) {
+            mc.level.setBlock(flashPos, Blocks.AIR.defaultBlockState(), 3);
+            System.out.println("[DEBUG] Light removed at: " + flashPos);
         }
     }
 }
