@@ -7,7 +7,8 @@
   "client": [
     "CombinedSwayMixin",
     "FirstPersonRenderGunEventInvoker",
-    "NoRecoilRecoveryMixin"
+    "NoRecoilRecoveryMixin",
+    "GunFireMixin"
   ],
   "minVersion": "0.8.5"
 }
