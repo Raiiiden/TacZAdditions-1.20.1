@@ -1,20 +1,27 @@
 package com.raiiiden.taczadditions.client.renderer;
 
+import com.tacz.guns.api.entity.IGunOperator;
+import com.tacz.guns.entity.shooter.ShooterDataHolder;
+import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
+import com.tacz.guns.resource.modifier.custom.SilenceModifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
+import net.minecraft.world.level.block.state.properties.IntegerProperty;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraft.world.phys.Vec3;
-
+import it.unimi.dsi.fastutil.Pair;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Optional;
 
 @OnlyIn(Dist.CLIENT)
 public class MuzzleFlashRenderer {
@@ -25,41 +32,41 @@ public class MuzzleFlashRenderer {
 
     private static boolean isRegistered = false;
 
-    public static void triggerFlash() {
+    public static void triggerFlash(Player player) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.player == null || mc.level == null) return;
+        if (mc.level == null || player == null) return;
 
-        Player player = mc.player;
         Level level = mc.level;
 
-        Vec3 eyePos = player.getEyePosition(); // Player's head position
-        Vec3 lookVec = player.getLookAngle().normalize(); // Direction player is looking
+        Vec3 eyePos = player.getEyePosition();
+        Vec3 lookVec = player.getLookAngle().normalize();
 
-        // Offset forward by 1 block
         double distance = 1.0;
         Vec3 flashPosVec = eyePos.add(lookVec.scale(distance));
 
-        // Convert to block position
-        BlockPos initialPos = new BlockPos(
+        BlockPos flashPos = new BlockPos(
                 (int) Math.floor(flashPosVec.x),
                 (int) Math.floor(flashPosVec.y),
                 (int) Math.floor(flashPosVec.z)
         );
 
-        // Find a valid air block within 3x3 area
-        BlockPos validFlashPos = findNearestAirBlock(level, initialPos);
-        if (validFlashPos == null) {
-            System.out.println("[DEBUG] No valid air block found for muzzle flash.");
-            return;
-        }
+        // Determine if the gun is silenced
+        int lightLevel = isGunSilenced(player) ? 6 : 15; // Lower brightness if silenced
 
-        level.setBlock(validFlashPos, Blocks.LIGHT.defaultBlockState(), 3);
-        synchronized (flashPositions) {
-            flashPositions.add(validFlashPos);
-            flashTimes.add(System.currentTimeMillis());
-        }
+        // Ensure the block is air before setting light
+        if (level.getBlockState(flashPos).isAir()) {
+            // Get light block "level" property dynamically
+            IntegerProperty lightProperty = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperties().iterator().next();
 
-        System.out.println("[DEBUG] Muzzle flash triggered at: " + validFlashPos);
+            level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState().setValue(lightProperty, lightLevel), 3);
+
+            synchronized (flashPositions) {
+                flashPositions.add(flashPos);
+                flashTimes.add(System.currentTimeMillis());
+            }
+
+            System.out.println("[DEBUG] Muzzle flash triggered at: " + flashPos + " with light level: " + lightLevel);
+        }
 
         if (!isRegistered) {
             MinecraftForge.EVENT_BUS.register(new MuzzleFlashRenderer());
@@ -67,24 +74,51 @@ public class MuzzleFlashRenderer {
         }
     }
 
-    private static BlockPos findNearestAirBlock(Level level, BlockPos centerPos) {
-        // Check if the intended position is already air
-        if (level.getBlockState(centerPos).isAir()) {
-            return centerPos;
+    private static boolean isGunSilenced(Player player) {
+        if (player == null) return false;
+
+        IGunOperator operator = IGunOperator.fromLivingEntity(player);
+        if (operator == null) {
+            System.out.println("[DEBUG] IGunOperator is NULL");
+            return false;
         }
 
-        // Search for the closest air block in a 3x3 area
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                for (int dz = -1; dz <= 1; dz++) {
-                    BlockPos checkPos = centerPos.offset(dx, dy, dz);
-                    if (level.getBlockState(checkPos).isAir()) {
-                        return checkPos; // Return the first valid air block found
-                    }
-                }
+        ShooterDataHolder dataHolder = operator.getDataHolder();
+        if (dataHolder == null) {
+            System.out.println("[DEBUG] ShooterDataHolder is NULL");
+            return false;
+        }
+
+        ItemStack gunItem = dataHolder.currentGunItem != null ? dataHolder.currentGunItem.get() : ItemStack.EMPTY;
+        if (gunItem.isEmpty()) {
+            System.out.println("[DEBUG] Gun item is EMPTY");
+            return false;
+        }
+
+        AttachmentCacheProperty cacheProperty = operator.getCacheProperty();
+        if (cacheProperty == null) {
+            System.out.println("[DEBUG] CacheProperty is NULL");
+            return false;
+        }
+
+        // Get silence modifier data
+        Object silenceData = cacheProperty.getCache(SilenceModifier.ID);
+
+        // Log the silence data for debugging
+        System.out.println("[DEBUG] SilenceModifier Cache Data: " + silenceData);
+
+        // Check if silenceData is a Pair and extract the Boolean value
+        if (silenceData instanceof Pair<?, ?> pair) {
+            Object rightValue = pair.right();
+
+            if (rightValue instanceof Boolean booleanValue) {
+                System.out.println("[DEBUG] Gun is silenced: " + booleanValue);
+                return booleanValue; // True if silenced
             }
         }
-        return null; // No air block found within 3x3 area
+
+        System.out.println("[DEBUG] Gun is NOT silenced");
+        return false;
     }
 
     @SubscribeEvent
