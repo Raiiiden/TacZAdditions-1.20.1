@@ -27,8 +27,8 @@ import java.util.Optional;
 public class MuzzleFlashRenderer {
     private static final List<BlockPos> flashPositions = new ArrayList<>();
     private static final List<Long> flashTimes = new ArrayList<>();
-    private static final long FLASH_DURATION_MS = 10; // 10ms muzzle flash
-    private static final long MAX_FLASH_LIFETIME_MS = 1000; // Safety removal after 1 second
+    private static final long FLASH_DURATION_MS = 10;
+    private static final long MAX_FLASH_LIFETIME_MS = 1000;
 
     private static boolean isRegistered = false;
 
@@ -37,27 +37,15 @@ public class MuzzleFlashRenderer {
         if (mc.level == null || player == null) return;
 
         Level level = mc.level;
-
         Vec3 eyePos = player.getEyePosition();
         Vec3 lookVec = player.getLookAngle().normalize();
+        Vec3 flashPosVec = eyePos.add(lookVec.scale(1.0));
+        BlockPos flashPos = new BlockPos((int) Math.floor(flashPosVec.x), (int) Math.floor(flashPosVec.y), (int) Math.floor(flashPosVec.z));
 
-        double distance = 1.0;
-        Vec3 flashPosVec = eyePos.add(lookVec.scale(distance));
+        int lightLevel = isGunSilenced(player) ? 6 : 15;
 
-        BlockPos flashPos = new BlockPos(
-                (int) Math.floor(flashPosVec.x),
-                (int) Math.floor(flashPosVec.y),
-                (int) Math.floor(flashPosVec.z)
-        );
-
-        // Determine if the gun is silenced
-        int lightLevel = isGunSilenced(player) ? 6 : 15; // Lower brightness if silenced
-
-        // Ensure the block is air before setting light
         if (level.getBlockState(flashPos).isAir()) {
-            // Get light block "level" property dynamically
             IntegerProperty lightProperty = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperties().iterator().next();
-
             level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState().setValue(lightProperty, lightLevel), 3);
 
             synchronized (flashPositions) {
@@ -78,46 +66,25 @@ public class MuzzleFlashRenderer {
         if (player == null) return false;
 
         IGunOperator operator = IGunOperator.fromLivingEntity(player);
-        if (operator == null) {
-            System.out.println("[DEBUG] IGunOperator is NULL");
-            return false;
-        }
+        if (operator == null) return false;
 
         ShooterDataHolder dataHolder = operator.getDataHolder();
-        if (dataHolder == null) {
-            System.out.println("[DEBUG] ShooterDataHolder is NULL");
-            return false;
-        }
+        if (dataHolder == null) return false;
 
         ItemStack gunItem = dataHolder.currentGunItem != null ? dataHolder.currentGunItem.get() : ItemStack.EMPTY;
-        if (gunItem.isEmpty()) {
-            System.out.println("[DEBUG] Gun item is EMPTY");
-            return false;
-        }
+        if (gunItem.isEmpty()) return false;
 
         AttachmentCacheProperty cacheProperty = operator.getCacheProperty();
-        if (cacheProperty == null) {
-            System.out.println("[DEBUG] CacheProperty is NULL");
-            return false;
-        }
+        if (cacheProperty == null) return false;
 
-        // Get silence modifier data
         Object silenceData = cacheProperty.getCache(SilenceModifier.ID);
 
-        // Log the silence data for debugging
-        System.out.println("[DEBUG] SilenceModifier Cache Data: " + silenceData);
-
-        // Check if silenceData is a Pair and extract the Boolean value
         if (silenceData instanceof Pair<?, ?> pair) {
             Object rightValue = pair.right();
-
             if (rightValue instanceof Boolean booleanValue) {
-                System.out.println("[DEBUG] Gun is silenced: " + booleanValue);
-                return booleanValue; // True if silenced
+                return booleanValue;
             }
         }
-
-        System.out.println("[DEBUG] Gun is NOT silenced");
         return false;
     }
 

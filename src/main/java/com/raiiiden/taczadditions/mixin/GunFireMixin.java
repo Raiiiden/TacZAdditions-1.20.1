@@ -35,17 +35,17 @@ public class GunFireMixin {
 
         // Ensure the shooter is a player before triggering the flash
         if (shooter instanceof Player player) {
-            if (fireMode.name().equalsIgnoreCase("SINGLE") || fireMode.name().equalsIgnoreCase("SEMI") || fireMode.name().equalsIgnoreCase("SEMI_AUTO")) {
-                MuzzleFlashRenderer.triggerFlash(player);
-                return;
-            }
-            if (fireMode.name().equalsIgnoreCase("AUTO") || fireMode.name().equalsIgnoreCase("FULL_AUTO")) {
-                MuzzleFlashRenderer.triggerFlash(player);
-                return;
-            }
-            if (fireMode.name().equalsIgnoreCase("BURST")) {
-                triggerBurstMuzzleFlash(player, gunItem);
-                return;
+            switch (fireMode.name().toUpperCase()) {
+                case "SINGLE":
+                case "SEMI":
+                case "SEMI_AUTO":
+                case "AUTO":
+                case "FULL_AUTO":
+                    MuzzleFlashRenderer.triggerFlash(player);
+                    break;
+                case "BURST":
+                    triggerBurstMuzzleFlash(player, gunItem);
+                    break;
             }
         }
     }
