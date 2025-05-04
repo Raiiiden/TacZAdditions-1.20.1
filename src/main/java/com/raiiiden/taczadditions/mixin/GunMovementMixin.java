@@ -46,6 +46,7 @@ public class GunMovementMixin {
 
     @Inject(method = "onRenderHand", at = @At("HEAD"))
     private static void applyCustomGunSway(RenderHandEvent event, CallbackInfo ci) {
+        if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 

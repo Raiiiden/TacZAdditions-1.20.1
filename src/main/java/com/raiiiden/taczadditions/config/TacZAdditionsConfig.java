@@ -19,7 +19,7 @@ public class TacZAdditionsConfig {
 
     public static class Client {
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
-        public final ForgeConfigSpec.BooleanValue enableCameraSway;
+        public final ForgeConfigSpec.BooleanValue enableGunMovement;
 
         public final ForgeConfigSpec.DoubleValue hipfireRollFactor;
         public final ForgeConfigSpec.DoubleValue aimingRollFactor;
@@ -40,9 +40,9 @@ public class TacZAdditionsConfig {
                     .comment("If true, recoil recovery is enabled.")
                     .define("enableRecoilRecovery", true);
 
-            enableCameraSway = builder
-                    .comment("If true, camera sway is enabled.")
-                    .define("enableCameraSway", true);
+            enableGunMovement = builder
+                    .comment("If false, disables all gun movement (sway, roll, etc).")
+                    .define("enableGunMovement", true);
 
             hipfireRollFactor = builder
                     .comment("Roll factor when hip-firing.")
