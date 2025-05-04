@@ -1,21 +1,24 @@
 package com.raiiiden.taczadditions.mixin;
 
-import com.raiiiden.taczadditions.client.renderer.MuzzleFlashRenderer;
+import com.raiiiden.taczadditions.network.ModNetworking;
 import com.tacz.guns.api.item.gun.FireMode;
+import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.entity.shooter.ShooterDataHolder;
 import com.tacz.guns.item.ModernKineticGunItem;
-import com.tacz.guns.resource.pojo.data.gun.GunData;
+import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
+import com.tacz.guns.resource.modifier.custom.SilenceModifier;
 import com.tacz.guns.resource.pojo.data.gun.BurstData;
-import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.resource.pojo.data.gun.GunData;
+import net.minecraft.core.BlockPos;
+import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
-import net.minecraft.world.entity.player.Player;
 import net.minecraft.world.item.ItemStack;
+import net.minecraft.world.phys.Vec3;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
-import java.util.Arrays;
 import java.util.concurrent.Executors;
 import java.util.concurrent.ScheduledExecutorService;
 import java.util.concurrent.TimeUnit;
@@ -25,55 +28,54 @@ import java.util.function.Supplier;
 public class GunFireMixin {
     private static final ScheduledExecutorService scheduler = Executors.newScheduledThreadPool(1);
 
-    @Inject(method = "shoot", at = @At("HEAD"), remap = false)
-    private void onGunFire(ShooterDataHolder dataHolder, ItemStack gunItem, Supplier<Float> pitch, Supplier<Float> yaw, LivingEntity shooter, CallbackInfo ci) {
-        FireMode fireMode = ((ModernKineticGunItem) (Object) this).getFireMode(gunItem);
+    @Inject(method = "shoot", at = @At("TAIL"), remap = false)
+    private void afterShoot(ShooterDataHolder dataHolder, ItemStack gunItem, Supplier<Float> pitch, Supplier<Float> yaw, LivingEntity shooter, CallbackInfo ci) {
+        if (!(shooter instanceof ServerPlayer player)) return;
 
-        // Debugging Fire Modes
-        System.out.println("[DEBUG] Available FireMode values: " + Arrays.toString(FireMode.values()));
-        System.out.println("[DEBUG] Gun fired in mode: " + fireMode.name());
+        ModernKineticGunItem gun = (ModernKineticGunItem) (Object) this;
+        FireMode fireMode = gun.getFireMode(gunItem);
+        boolean silenced = isGunSilenced(dataHolder);
+        int lightLevel = silenced ? 6 : 15;
 
-        // Ensure the shooter is a player before triggering the flash
-        if (shooter instanceof Player player) {
-            switch (fireMode.name().toUpperCase()) {
-                case "SINGLE":
-                case "SEMI":
-                case "SEMI_AUTO":
-                case "AUTO":
-                case "FULL_AUTO":
-                    MuzzleFlashRenderer.triggerFlash(player);
-                    break;
-                case "BURST":
-                    triggerBurstMuzzleFlash(player, gunItem);
-                    break;
+        Vec3 baseVec = shooter.getEyePosition().add(shooter.getLookAngle().normalize().scale(1.0));
+        BlockPos basePos = BlockPos.containing(baseVec);
+
+        if (fireMode == FireMode.BURST) {
+            // Lookup burst config
+            GunData data = TimelessAPI.getCommonGunIndex(gun.getGunId(gunItem))
+                    .map(index -> index.getGunData())
+                    .orElse(null);
+
+            if (data != null && data.getBurstData() != null) {
+                BurstData burst = data.getBurstData();
+                int count = burst.getCount();
+                long delay = 60000L / burst.getBpm();
+
+                for (int i = 0; i < count; i++) {
+                    int shotNum = i;
+                    scheduler.schedule(() -> {
+                        ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+                    }, shotNum * delay, TimeUnit.MILLISECONDS);
+                }
+                return;
             }
         }
+
+        // Regular flash
+        ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
     }
 
-    private void triggerBurstMuzzleFlash(Player player, ItemStack gunItem) {
-        int burstCount = 3;
-        int burstDelayMs = 100;
+    private boolean isGunSilenced(ShooterDataHolder dataHolder) {
+        if (dataHolder.currentGunItem == null || dataHolder.currentGunItem.get().isEmpty()) return false;
 
-        var gunId = ((ModernKineticGunItem) (Object) this).getGunId(gunItem);
-        var gunIndex = TimelessAPI.getCommonGunIndex(gunId);
+        AttachmentCacheProperty cache = dataHolder.cacheProperty;
+        if (cache == null) return false;
 
-        if (gunIndex.isPresent()) {
-            GunData gunData = gunIndex.get().getGunData();
-            BurstData burstData = gunData.getBurstData();
-
-            if (burstData != null) {
-                burstCount = burstData.getCount();
-                burstDelayMs = (int) (60000.0 / burstData.getBpm());
-                System.out.println("[DEBUG] Burst fire: " + burstCount + " shots, " + burstDelayMs + "ms delay.");
-            }
+        Object silenceData = cache.getCache(SilenceModifier.ID);
+        if (silenceData instanceof it.unimi.dsi.fastutil.Pair<?, ?> pair) {
+            Object right = pair.right();
+            if (right instanceof Boolean b) return b;
         }
-
-        for (int i = 0; i < burstCount; i++) {
-            int delay = i * burstDelayMs;
-            scheduler.schedule(() -> {
-                System.out.println("[DEBUG] Burst shot muzzle flash!");
-                MuzzleFlashRenderer.triggerFlash(player);
-            }, delay, TimeUnit.MILLISECONDS);
-        }
+        return false;
     }
 }

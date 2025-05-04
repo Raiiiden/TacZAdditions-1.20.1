@@ -1,13 +1,7 @@
 package com.raiiiden.taczadditions.client.renderer;
 
-import com.tacz.guns.api.entity.IGunOperator;
-import com.tacz.guns.entity.shooter.ShooterDataHolder;
-import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
-import com.tacz.guns.resource.modifier.custom.SilenceModifier;
 import net.minecraft.client.Minecraft;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
-import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.level.Level;
 import net.minecraft.world.level.block.Blocks;
 import net.minecraft.world.level.block.state.properties.IntegerProperty;
@@ -16,12 +10,10 @@ import net.minecraftforge.api.distmarker.OnlyIn;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
-import net.minecraft.world.phys.Vec3;
-import it.unimi.dsi.fastutil.Pair;
+
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.List;
-import java.util.Optional;
 
 @OnlyIn(Dist.CLIENT)
 public class MuzzleFlashRenderer {
@@ -32,20 +24,16 @@ public class MuzzleFlashRenderer {
 
     private static boolean isRegistered = false;
 
-    public static void triggerFlash(Player player) {
+    public static void triggerFlashAt(BlockPos flashPos, int lightLevel) {
         Minecraft mc = Minecraft.getInstance();
-        if (mc.level == null || player == null) return;
-
         Level level = mc.level;
-        Vec3 eyePos = player.getEyePosition();
-        Vec3 lookVec = player.getLookAngle().normalize();
-        Vec3 flashPosVec = eyePos.add(lookVec.scale(1.0));
-        BlockPos flashPos = new BlockPos((int) Math.floor(flashPosVec.x), (int) Math.floor(flashPosVec.y), (int) Math.floor(flashPosVec.z));
+        if (level == null) {
+            System.out.println("[DEBUG] Level is null.");
+            return;
+        }
 
-        int lightLevel = isGunSilenced(player) ? 6 : 15;
-
-        if (level.getBlockState(flashPos).isAir()) {
-            IntegerProperty lightProperty = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperties().iterator().next();
+        try {
+            IntegerProperty lightProperty = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperty("level");
             level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState().setValue(lightProperty, lightLevel), 3);
 
             synchronized (flashPositions) {
@@ -53,39 +41,15 @@ public class MuzzleFlashRenderer {
                 flashTimes.add(System.currentTimeMillis());
             }
 
-            System.out.println("[DEBUG] Muzzle flash triggered at: " + flashPos + " with light level: " + lightLevel);
+            System.out.println("[DEBUG] Muzzle flash placed at: " + flashPos + " with light level: " + lightLevel);
+        } catch (Exception e) {
+            e.printStackTrace();
         }
 
         if (!isRegistered) {
             MinecraftForge.EVENT_BUS.register(new MuzzleFlashRenderer());
             isRegistered = true;
         }
-    }
-
-    private static boolean isGunSilenced(Player player) {
-        if (player == null) return false;
-
-        IGunOperator operator = IGunOperator.fromLivingEntity(player);
-        if (operator == null) return false;
-
-        ShooterDataHolder dataHolder = operator.getDataHolder();
-        if (dataHolder == null) return false;
-
-        ItemStack gunItem = dataHolder.currentGunItem != null ? dataHolder.currentGunItem.get() : ItemStack.EMPTY;
-        if (gunItem.isEmpty()) return false;
-
-        AttachmentCacheProperty cacheProperty = operator.getCacheProperty();
-        if (cacheProperty == null) return false;
-
-        Object silenceData = cacheProperty.getCache(SilenceModifier.ID);
-
-        if (silenceData instanceof Pair<?, ?> pair) {
-            Object rightValue = pair.right();
-            if (rightValue instanceof Boolean booleanValue) {
-                return booleanValue;
-            }
-        }
-        return false;
     }
 
     @SubscribeEvent
