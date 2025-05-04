@@ -1,0 +1,133 @@
+package com.raiiiden.taczadditions.mixin;
+
+import com.mojang.blaze3d.vertex.PoseStack;
+import com.mojang.math.Axis;
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
+import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
+import com.tacz.guns.api.item.gun.AbstractGunItem;
+import com.tacz.guns.client.event.FirstPersonRenderGunEvent;
+import net.minecraft.client.Minecraft;
+import net.minecraft.client.player.LocalPlayer;
+import net.minecraft.world.item.ItemStack;
+import net.minecraftforge.client.event.RenderHandEvent;
+import org.spongepowered.asm.mixin.Mixin;
+import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Inject;
+import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
+
+@Mixin(value = FirstPersonRenderGunEvent.class, remap = false)
+public class GunMovementMixin {
+
+    private static final float DEFAULT_PITCH_SENSITIVITY = 0.35F;
+    private static final float DEFAULT_YAW_SENSITIVITY = 0.3F;
+    private static final float DEFAULT_ROLL_SENSITIVITY = 1.2F;
+
+    private static final float DEFAULT_DRAG_SMOOTHING = 0.15F;
+    private static final float DEFAULT_DECAY_FACTOR = 0.84F;
+    private static final float DEFAULT_MOMENTUM_FACTOR = 0.45F;
+
+    private static final float DEFAULT_HIP_YAW_MULTIPLIER = 1.25F;
+    private static final float DEFAULT_HIP_PITCH_MULTIPLIER = 0.7F;
+    private static final float DEFAULT_HIP_ROLL_MULTIPLIER = 2.75F;
+    private static final float DEFAULT_AIM_ROLL_MULTIPLIER = 2.75F;
+
+    private static final float DEFAULT_MAX_ROLL_HIP = 20f;
+    private static final float DEFAULT_MAX_ROLL_AIM = 20f;
+
+    private static float smoothedPitch = 0;
+    private static float smoothedYaw = 0;
+    private static float smoothedRoll = 0;
+    private static float pitchVelocity = 0;
+    private static float yawVelocity = 0;
+    private static float rollVelocity = 0;
+    private static float lastPitch = 0;
+    private static float lastYaw = 0;
+    private static long lastFrameTime = 0;
+
+    @Inject(method = "onRenderHand", at = @At("HEAD"))
+    private static void applyCustomGunSway(RenderHandEvent event, CallbackInfo ci) {
+        LocalPlayer player = Minecraft.getInstance().player;
+        if (player == null) return;
+
+        ItemStack main = player.getMainHandItem();
+        if (!(main.getItem() instanceof AbstractGunItem)) return;
+
+        PoseStack poseStack = event.getPoseStack();
+
+        long currentTime = System.currentTimeMillis();
+        float deltaTime = (lastFrameTime == 0) ? 0.016f : Math.min(0.05f, (currentTime - lastFrameTime) / 1000f);
+        lastFrameTime = currentTime;
+
+        float timeFactor = deltaTime * 60f;
+
+        float currentPitch = player.getViewXRot(event.getPartialTick());
+        float currentYaw = player.getViewYRot(event.getPartialTick());
+        float deltaPitch = (currentPitch - lastPitch) * timeFactor;
+        float deltaYaw = (currentYaw - lastYaw) * timeFactor;
+
+        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(event.getPartialTick());
+
+        float yawMult = get("hipfireYawMultiplier", DEFAULT_HIP_YAW_MULTIPLIER);
+        float pitchMult = get("hipfirePitchMultiplier", DEFAULT_HIP_PITCH_MULTIPLIER);
+        float hipFireFactor = 1.0F + ((1.0F - aimingProgress) * (yawMult - 1.0F));
+        float hipFirePitchFactor = 1.0F + ((1.0F - aimingProgress) * (pitchMult - 1.0F));
+
+        float hipRoll = get("hipfireRollFactor", DEFAULT_HIP_ROLL_MULTIPLIER);
+        float aimRoll = get("aimingRollFactor", DEFAULT_AIM_ROLL_MULTIPLIER);
+        float hipFireRollFactor = aimRoll + ((1.0F - aimingProgress) * (hipRoll - aimRoll));
+
+        float drag = get("dragSmoothing", DEFAULT_DRAG_SMOOTHING);
+        float decay = get("decayFactor", DEFAULT_DECAY_FACTOR);
+        float momentum = get("momentumFactor", DEFAULT_MOMENTUM_FACTOR);
+        float rollSens = get("rollSensitivity", DEFAULT_ROLL_SENSITIVITY);
+        float maxRoll = get("maxTiltAngle", DEFAULT_MAX_ROLL_AIM + (DEFAULT_MAX_ROLL_HIP - DEFAULT_MAX_ROLL_AIM) * (1.0f - aimingProgress));
+
+        pitchVelocity = pitchVelocity * 0.85f + deltaPitch * drag * hipFirePitchFactor;
+        yawVelocity = yawVelocity * 0.85f + deltaYaw * drag * hipFireFactor;
+        rollVelocity = rollVelocity * 0.85f + (-yawVelocity * 0.2f * hipFireRollFactor);
+
+        smoothedPitch += pitchVelocity * momentum;
+        smoothedYaw += yawVelocity * momentum;
+        smoothedRoll += rollVelocity * momentum;
+
+        smoothedPitch *= Math.pow(decay, timeFactor);
+        smoothedYaw *= Math.pow(decay, timeFactor);
+        smoothedRoll *= Math.pow(decay, timeFactor);
+
+        float oscillation = 0.03f * (1.0f - aimingProgress);
+        smoothedPitch += Math.sin(currentTime * 0.003) * oscillation;
+        smoothedYaw += Math.sin(currentTime * 0.002) * oscillation;
+
+        float maxPitch = 10f + (8f * (1.0f - aimingProgress));
+        float maxYaw = 10f + (12f * (1.0f - aimingProgress));
+
+        smoothedPitch = clamp(smoothedPitch, -maxPitch, maxPitch);
+        smoothedYaw = clamp(smoothedYaw, -maxYaw, maxYaw);
+        smoothedRoll = clamp(smoothedRoll, -maxRoll, maxRoll);
+
+        poseStack.mulPose(Axis.XP.rotationDegrees(-smoothedPitch * DEFAULT_PITCH_SENSITIVITY));
+        poseStack.mulPose(Axis.YP.rotationDegrees(smoothedYaw * DEFAULT_YAW_SENSITIVITY * hipFireFactor * 0.9f));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(smoothedRoll * rollSens));
+
+        float xOffset = smoothedYaw * 0.012f * hipFireFactor * 0.9f;
+        float yOffset = -smoothedPitch * 0.012f * hipFirePitchFactor;
+
+        poseStack.translate(xOffset, yOffset, 0);
+
+        lastPitch = currentPitch;
+        lastYaw = currentYaw;
+    }
+
+    private static float get(String key, float def) {
+        if (TacZAdditionsConfig.CLIENT_SPEC != null) {
+            try {
+                return ((Double) TacZAdditionsConfig.CLIENT_SPEC.getValues().get("client." + key)).floatValue();
+            } catch (Exception ignored) {}
+        }
+        return def;
+    }
+
+    private static float clamp(float value, float min, float max) {
+        return Math.max(min, Math.min(max, value));
+    }
+}
