@@ -1,12 +1,11 @@
 package com.raiiiden.taczadditions.network;
 
+import com.raiiiden.taczadditions.client.renderer.MuzzleFlashRenderer;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.BlockPos;
-import net.minecraft.world.level.block.Blocks;
-import net.minecraft.client.Minecraft;
 import net.minecraftforge.network.NetworkEvent;
+
 import java.util.function.Supplier;
-import net.minecraft.world.level.block.state.properties.IntegerProperty;
 
 public class MuzzleFlashPacket {
     private final BlockPos pos;
@@ -28,16 +27,8 @@ public class MuzzleFlashPacket {
 
     public static void handle(MuzzleFlashPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
         contextSupplier.get().enqueueWork(() -> {
-            Minecraft mc = Minecraft.getInstance();
-            if (mc.level != null) {
-                // Fix: Get the correct IntegerProperty for light level
-                IntegerProperty LIGHT_LEVEL = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperty("level");
-                mc.level.setBlock(
-                        msg.pos,
-                        Blocks.LIGHT.defaultBlockState().setValue(LIGHT_LEVEL, msg.lightLevel),
-                        3
-                );
-            }
+            MuzzleFlashRenderer.triggerFlashAt(msg.pos, msg.lightLevel);
+            System.out.println("[DEBUG] Packet received: placing light at " + msg.pos + " with level " + msg.lightLevel);
         });
         contextSupplier.get().setPacketHandled(true);
     }

@@ -27,7 +27,7 @@ public class GunMovementMixin {
     private static final float DEFAULT_MOMENTUM_FACTOR = 0.45F;
 
     private static final float DEFAULT_HIP_YAW_MULTIPLIER = 1.25F;
-    private static final float DEFAULT_HIP_PITCH_MULTIPLIER = 0.7F;
+    private static final float DEFAULT_HIP_PITCH_MULTIPLIER = 1.2F;
     private static final float DEFAULT_HIP_ROLL_MULTIPLIER = 2.75F;
     private static final float DEFAULT_AIM_ROLL_MULTIPLIER = 2.75F;
 
