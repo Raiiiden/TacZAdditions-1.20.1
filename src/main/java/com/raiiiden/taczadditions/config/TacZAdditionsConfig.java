@@ -34,7 +34,7 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue momentumFactor;
 
         public Client(ForgeConfigSpec.Builder builder) {
-            builder.comment("TacZ Additions client configuration settings").push("client");
+            builder.comment("TaCZ: Additions client configuration settings").push("client");
 
             enableRecoilRecovery = builder
                     .comment("If true, recoil recovery is enabled.")

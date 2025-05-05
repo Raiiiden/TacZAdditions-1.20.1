@@ -33,15 +33,43 @@ public class MuzzleFlashRenderer {
         }
 
         try {
+            BlockPos targetPos = null;
+
+            // Check if the initial position is air
+            if (level.getBlockState(flashPos).isAir()) {
+                targetPos = flashPos;
+            } else {
+                // Search for the nearest air block in a 3x3 area
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        for (int dz = -1; dz <= 1; dz++) {
+                            BlockPos nearbyPos = flashPos.offset(dx, dy, dz);
+                            if (level.getBlockState(nearbyPos).isAir()) {
+                                targetPos = nearbyPos;
+                                break;
+                            }
+                        }
+                        if (targetPos != null) break;
+                    }
+                    if (targetPos != null) break;
+                }
+            }
+
+            // If no air block is found, do nothing
+            if (targetPos == null) {
+                System.out.println("[DEBUG] No suitable air block found near: " + flashPos);
+                return;
+            }
+
             IntegerProperty lightProperty = (IntegerProperty) Blocks.LIGHT.getStateDefinition().getProperty("level");
-            level.setBlock(flashPos, Blocks.LIGHT.defaultBlockState().setValue(lightProperty, lightLevel), 3);
+            level.setBlock(targetPos, Blocks.LIGHT.defaultBlockState().setValue(lightProperty, lightLevel), 3);
 
             synchronized (flashPositions) {
-                flashPositions.add(flashPos);
+                flashPositions.add(targetPos);
                 flashTimes.add(System.currentTimeMillis());
             }
 
-            System.out.println("[DEBUG] Muzzle flash placed at: " + flashPos + " with light level: " + lightLevel);
+            System.out.println("[DEBUG] Muzzle flash placed at: " + targetPos + " with light level: " + lightLevel);
         } catch (Exception e) {
             e.printStackTrace();
         }
