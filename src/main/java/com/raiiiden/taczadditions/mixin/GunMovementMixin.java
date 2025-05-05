@@ -120,14 +120,23 @@ public class GunMovementMixin {
     }
 
     private static float get(String key, float def) {
-        if (TacZAdditionsConfig.CLIENT_SPEC != null) {
-            try {
-                return ((Double) TacZAdditionsConfig.CLIENT_SPEC.getValues().get("client." + key)).floatValue();
-            } catch (Exception ignored) {}
+        try {
+            return switch (key) {
+                case "hipfireRollFactor" -> TacZAdditionsConfig.CLIENT.hipfireRollFactor.get().floatValue();
+                case "aimingRollFactor" -> TacZAdditionsConfig.CLIENT.aimingRollFactor.get().floatValue();
+                case "rollSensitivity" -> TacZAdditionsConfig.CLIENT.rollSensitivity.get().floatValue();
+                case "maxTiltAngle" -> TacZAdditionsConfig.CLIENT.maxTiltAngle.get().floatValue();
+                case "hipfireYawMultiplier" -> TacZAdditionsConfig.CLIENT.hipfireYawMultiplier.get().floatValue();
+                case "hipfirePitchMultiplier" -> TacZAdditionsConfig.CLIENT.hipfirePitchMultiplier.get().floatValue();
+                case "dragSmoothing" -> TacZAdditionsConfig.CLIENT.dragSmoothing.get().floatValue();
+                case "decayFactor" -> TacZAdditionsConfig.CLIENT.decayFactor.get().floatValue();
+                case "momentumFactor" -> TacZAdditionsConfig.CLIENT.momentumFactor.get().floatValue();
+                default -> def;
+            };
+        } catch (Exception e) {
+            return def;
         }
-        return def;
     }
-
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));
     }
