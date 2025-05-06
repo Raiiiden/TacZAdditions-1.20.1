@@ -1,8 +1,9 @@
 package com.raiiiden.taczadditions.mixin;
 
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
-import com.tacz.guns.api.item.gun.FireMode;
 import com.tacz.guns.api.TimelessAPI;
+import com.tacz.guns.api.item.gun.FireMode;
 import com.tacz.guns.entity.shooter.ShooterDataHolder;
 import com.tacz.guns.item.ModernKineticGunItem;
 import com.tacz.guns.resource.modifier.AttachmentCacheProperty;
@@ -41,7 +42,6 @@ public class GunFireMixin {
         BlockPos basePos = BlockPos.containing(baseVec);
 
         if (fireMode == FireMode.BURST) {
-            // Lookup burst config
             GunData data = TimelessAPI.getCommonGunIndex(gun.getGunId(gunItem))
                     .map(index -> index.getGunData())
                     .orElse(null);
@@ -61,8 +61,11 @@ public class GunFireMixin {
             }
         }
 
-        // Regular flash
         ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+
+        float x = TacZAdditionsConfig.CLIENT.recoilVisualX.get().floatValue();
+        float y = TacZAdditionsConfig.CLIENT.recoilVisualY.get().floatValue();
+        float z = TacZAdditionsConfig.CLIENT.recoilVisualZ.get().floatValue();
     }
 
     private boolean isGunSilenced(ShooterDataHolder dataHolder) {

@@ -20,6 +20,10 @@ public class TacZAdditionsConfig {
     public static class Client {
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
+        public final ForgeConfigSpec.DoubleValue recoilCameraMultiplier;
+        public final ForgeConfigSpec.DoubleValue recoilVisualX;
+        public final ForgeConfigSpec.DoubleValue recoilVisualY;
+        public final ForgeConfigSpec.DoubleValue recoilVisualZ;
 
         public final ForgeConfigSpec.DoubleValue hipfireRollFactor;
         public final ForgeConfigSpec.DoubleValue aimingRollFactor;
@@ -70,15 +74,28 @@ public class TacZAdditionsConfig {
 
             dragSmoothing = builder
                     .comment("Drag smoothing factor (lower = more inertia).")
-                    .defineInRange("dragSmoothing", 0.15, 0.0, 1.0);
+                    .defineInRange("dragSmoothing", 0.2, 0.0, 1.0);
 
             decayFactor = builder
                     .comment("Decay factor for smoothing (higher = more lingering motion).")
-                    .defineInRange("decayFactor", 0.84, 0.0, 1.0);
+                    .defineInRange("decayFactor", 0.85, 0.0, 1.0);
 
             momentumFactor = builder
                     .comment("How much velocity contributes to position (lower = heavier).")
                     .defineInRange("momentumFactor", 0.45, 0.0, 1.0);
+
+            recoilVisualX = builder
+                    .comment("Recoil visual X offset multiplier (lateral shake)")
+                    .defineInRange("recoilVisualX", 1.0, 0.0, 10.0);
+            recoilVisualY = builder
+                    .comment("Recoil visual Y offset multiplier (vertical bounce)")
+                    .defineInRange("recoilVisualY", 1.0, 0.0, 10.0);
+            recoilVisualZ = builder
+                    .comment("Recoil visual Z offset multiplier (depth kickback)")
+                    .defineInRange("recoilVisualZ", 1.0, 0.0, 10.0);
+            recoilCameraMultiplier = builder
+                    .comment("Multiplier for camera recoil (pitch/yaw kick)")
+                    .defineInRange("recoilCameraMultiplier", 1.0, 0.0, 10.0);
 
             builder.pop();
         }

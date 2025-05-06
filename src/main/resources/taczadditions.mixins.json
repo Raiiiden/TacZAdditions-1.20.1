@@ -5,7 +5,9 @@
   "refmap": "taczadditions.refmap.json",
   "mixins": [],
   "client": [
+    "GunRecoilMixin",
     "GunMovementMixin",
+    "GunRecoilMultiplierMixin",
     "FirstPersonRenderGunEventInvoker",
     "NoRecoilRecoveryMixin",
     "GunFireMixin"
