@@ -1,5 +1,6 @@
 package com.raiiiden.taczadditions.mixin;
 
+import com.raiiiden.taczadditions.client.GunRecoilHandler;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
 import com.tacz.guns.api.TimelessAPI;
@@ -41,6 +42,10 @@ public class GunFireMixin {
         Vec3 baseVec = shooter.getEyePosition().add(shooter.getLookAngle().normalize().scale(1.0));
         BlockPos basePos = BlockPos.containing(baseVec);
 
+        float recoilX = TacZAdditionsConfig.CLIENT.recoilVisualX.get().floatValue();
+        float recoilY = TacZAdditionsConfig.CLIENT.recoilVisualY.get().floatValue();
+        float recoilZ = TacZAdditionsConfig.CLIENT.recoilVisualZ.get().floatValue();
+
         if (fireMode == FireMode.BURST) {
             GunData data = TimelessAPI.getCommonGunIndex(gun.getGunId(gunItem))
                     .map(index -> index.getGunData())
@@ -55,6 +60,7 @@ public class GunFireMixin {
                     int shotNum = i;
                     scheduler.schedule(() -> {
                         ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+                        GunRecoilHandler.trigger(recoilX, recoilY, recoilZ);
                     }, shotNum * delay, TimeUnit.MILLISECONDS);
                 }
                 return;
@@ -62,10 +68,7 @@ public class GunFireMixin {
         }
 
         ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
-
-        float x = TacZAdditionsConfig.CLIENT.recoilVisualX.get().floatValue();
-        float y = TacZAdditionsConfig.CLIENT.recoilVisualY.get().floatValue();
-        float z = TacZAdditionsConfig.CLIENT.recoilVisualZ.get().floatValue();
+        GunRecoilHandler.trigger(recoilX, recoilY, recoilZ);
     }
 
     private boolean isGunSilenced(ShooterDataHolder dataHolder) {

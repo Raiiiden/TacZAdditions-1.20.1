@@ -10,14 +10,14 @@ issueTrackerURL=""
 
 [[mods]] #mandatory
 modId="taczadditions" #mandatory
-version="0.2.6" #mandatory
+version="0.3.1" #mandatory
 displayName="TaCZ: Additions" #mandatory
 updateJSONURL=""
 displayURL="https://www.curseforge.com/minecraft/mc-mods/_curseslug_"
 logoFile=""
 credits=""
 authors="Raiiiden"
-description='''Enhancements to TacZ weapon mechanics.'''
+description='''Enhancements to TaCZ weapon mechanics.'''
 
 [[dependencies.taczadditions]]
 modId="forge"

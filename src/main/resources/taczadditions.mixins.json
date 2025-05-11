@@ -7,7 +7,6 @@
   "client": [
     "GunRecoilMixin",
     "GunMovementMixin",
-    "GunRecoilMultiplierMixin",
     "FirstPersonRenderGunEventInvoker",
     "NoRecoilRecoveryMixin",
     "GunFireMixin"

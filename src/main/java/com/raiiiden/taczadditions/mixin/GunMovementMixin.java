@@ -2,6 +2,7 @@ package com.raiiiden.taczadditions.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.raiiiden.taczadditions.client.GunRecoilHandler;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
@@ -109,6 +110,16 @@ public class GunMovementMixin {
         float xOffset = smoothedYaw * 0.012f * hipFireFactor * 0.9f;
         float yOffset = -smoothedPitch * 0.012f * hipFirePitchFactor;
         poseStack.translate(xOffset, yOffset, 0);
+
+        float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
+        if (recoilProgress > 0f) {
+            recoilProgress *= recoilProgress;
+            poseStack.translate(
+                    GunRecoilHandler.recoilX * recoilProgress * 0.01f,
+                    GunRecoilHandler.recoilY * recoilProgress * 0.01f,
+                    GunRecoilHandler.recoilZ * recoilProgress * 0.01f
+            );
+        }
 
         lastPitch = currentPitch;
         lastYaw = currentYaw;
