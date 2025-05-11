@@ -59,7 +59,9 @@ public class GunFireMixin {
                 for (int i = 0; i < count; i++) {
                     int shotNum = i;
                     scheduler.schedule(() -> {
-                        ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+                        if (TacZAdditionsConfig.SERVER.enableMuzzleFlash.get()) {
+                            ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+                        }
                         GunRecoilHandler.trigger(recoilX, recoilY, recoilZ);
                     }, shotNum * delay, TimeUnit.MILLISECONDS);
                 }
@@ -67,7 +69,9 @@ public class GunFireMixin {
             }
         }
 
-        ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+        if (TacZAdditionsConfig.SERVER.enableMuzzleFlash.get()) {
+            ModNetworking.sendMuzzleFlash(player, basePos, lightLevel);
+        }
         GunRecoilHandler.trigger(recoilX, recoilY, recoilZ);
     }
 

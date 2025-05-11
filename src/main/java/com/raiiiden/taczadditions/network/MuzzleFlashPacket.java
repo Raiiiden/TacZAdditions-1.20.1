@@ -1,6 +1,7 @@
 package com.raiiiden.taczadditions.network;
 
 import com.raiiiden.taczadditions.client.renderer.MuzzleFlashRenderer;
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.core.BlockPos;
 import net.minecraftforge.network.NetworkEvent;
@@ -27,8 +28,11 @@ public class MuzzleFlashPacket {
 
     public static void handle(MuzzleFlashPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {
         contextSupplier.get().enqueueWork(() -> {
+            if (!TacZAdditionsConfig.SERVER.enableMuzzleFlash.get()) {
+                return;
+            }
+
             MuzzleFlashRenderer.triggerFlashAt(msg.pos, msg.lightLevel);
-            System.out.println("[DEBUG] Packet received: placing light at " + msg.pos + " with level " + msg.lightLevel);
         });
         contextSupplier.get().setPacketHandled(true);
     }

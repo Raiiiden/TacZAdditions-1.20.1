@@ -28,18 +28,15 @@ public class MuzzleFlashRenderer {
         Minecraft mc = Minecraft.getInstance();
         Level level = mc.level;
         if (level == null) {
-            System.out.println("[DEBUG] Level is null.");
             return;
         }
 
         try {
             BlockPos targetPos = null;
 
-            // Check if the initial position is air
             if (level.getBlockState(flashPos).isAir()) {
                 targetPos = flashPos;
             } else {
-                // Search for the nearest air block in a 3x3 area
                 for (int dx = -1; dx <= 1; dx++) {
                     for (int dy = -1; dy <= 1; dy++) {
                         for (int dz = -1; dz <= 1; dz++) {
@@ -55,9 +52,7 @@ public class MuzzleFlashRenderer {
                 }
             }
 
-            // If no air block is found, do nothing
             if (targetPos == null) {
-                System.out.println("[DEBUG] No suitable air block found near: " + flashPos);
                 return;
             }
 
@@ -69,7 +64,6 @@ public class MuzzleFlashRenderer {
                 flashTimes.add(System.currentTimeMillis());
             }
 
-            System.out.println("[DEBUG] Muzzle flash placed at: " + targetPos + " with light level: " + lightLevel);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -116,7 +110,6 @@ public class MuzzleFlashRenderer {
         Minecraft mc = Minecraft.getInstance();
         if (mc.level != null && mc.level.getBlockState(flashPos).getBlock() == Blocks.LIGHT) {
             mc.level.setBlock(flashPos, Blocks.AIR.defaultBlockState(), 3);
-            System.out.println("[DEBUG] Light removed at: " + flashPos);
         }
         synchronized (flashPositions) {
             flashPositions.remove(flashPos);
