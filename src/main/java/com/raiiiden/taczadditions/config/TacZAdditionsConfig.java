@@ -26,6 +26,7 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue recoilVisualZ;
 
         public final ForgeConfigSpec.DoubleValue hipfireRollFactor;
+        public final ForgeConfigSpec.DoubleValue aimingYawMultiplier;
         public final ForgeConfigSpec.DoubleValue aimingRollFactor;
         public final ForgeConfigSpec.DoubleValue rollSensitivity;
         public final ForgeConfigSpec.DoubleValue maxTiltAngle;
@@ -55,6 +56,9 @@ public class TacZAdditionsConfig {
             aimingRollFactor = builder
                     .comment("Roll factor when aiming.")
                     .defineInRange("aimingRollFactor", 2.75, 0.0, 10.0);
+            aimingYawMultiplier = builder
+                    .comment("Yaw multiplier when aiming.")
+                    .defineInRange("aimingYawMultiplier", 0.3, 0.0, 10.0);
 
             rollSensitivity = builder
                     .comment("Sensitivity multiplier for roll rotation.")
@@ -66,7 +70,7 @@ public class TacZAdditionsConfig {
 
             hipfireYawMultiplier = builder
                     .comment("Yaw multiplier when hip-firing.")
-                    .defineInRange("hipfireYawMultiplier", 1.25, 0.0, 10.0);
+                    .defineInRange("hipfireYawMultiplier", 0.3, 0.0, 10.0);
 
             hipfirePitchMultiplier = builder
                     .comment("Pitch multiplier when hip-firing.")
