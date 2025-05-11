@@ -6,10 +6,9 @@ import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.event.FirstPersonRenderGunEvent;
-import net.minecraft.client.Minecraft;
+import com.tacz.guns.client.model.BedrockGunModel;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
-import net.minecraftforge.client.event.RenderHandEvent;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
@@ -27,6 +26,7 @@ public class GunMovementMixin {
     private static final float DEFAULT_MOMENTUM_FACTOR = 0.45F;
 
     private static final float DEFAULT_HIP_YAW_MULTIPLIER = 1.25F;
+    private static final float DEFAULT_AIM_YAW_MULTIPLIER = 1.25F;
     private static final float DEFAULT_HIP_PITCH_MULTIPLIER = 1.2F;
     private static final float DEFAULT_HIP_ROLL_MULTIPLIER = 2.75F;
     private static final float DEFAULT_AIM_ROLL_MULTIPLIER = 2.75F;
@@ -44,16 +44,10 @@ public class GunMovementMixin {
     private static float lastYaw = 0;
     private static long lastFrameTime = 0;
 
-    @Inject(method = "onRenderHand", at = @At("HEAD"))
-    private static void applyCustomGunSway(RenderHandEvent event, CallbackInfo ci) {
+    @Inject(method = "applyFirstPersonGunTransform", at = @At("TAIL"), remap = false)
+    private static void applyCustomGunSway(LocalPlayer player, ItemStack stack, PoseStack poseStack, BedrockGunModel model, float partialTicks, CallbackInfo ci) {
         if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
-        LocalPlayer player = Minecraft.getInstance().player;
-        if (player == null) return;
-
-        ItemStack main = player.getMainHandItem();
-        if (!(main.getItem() instanceof AbstractGunItem)) return;
-
-        PoseStack poseStack = event.getPoseStack();
+        if (!(stack.getItem() instanceof AbstractGunItem)) return;
 
         long currentTime = System.currentTimeMillis();
         float deltaTime = (lastFrameTime == 0) ? 0.016f : Math.min(0.05f, (currentTime - lastFrameTime) / 1000f);
@@ -61,16 +55,19 @@ public class GunMovementMixin {
 
         float timeFactor = deltaTime * 60f;
 
-        float currentPitch = player.getViewXRot(event.getPartialTick());
-        float currentYaw = player.getViewYRot(event.getPartialTick());
+        float currentPitch = player.getViewXRot(partialTicks);
+        float currentYaw = player.getViewYRot(partialTicks);
         float deltaPitch = (currentPitch - lastPitch) * timeFactor;
         float deltaYaw = (currentYaw - lastYaw) * timeFactor;
+        lastPitch = currentPitch;
+        lastYaw = currentYaw;
 
-        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(event.getPartialTick());
+        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTicks);
 
         float yawMult = get("hipfireYawMultiplier", DEFAULT_HIP_YAW_MULTIPLIER);
+        float aimYawMult = get("aimingYawMultiplier", DEFAULT_AIM_YAW_MULTIPLIER);
         float pitchMult = get("hipfirePitchMultiplier", DEFAULT_HIP_PITCH_MULTIPLIER);
-        float hipFireFactor = 1.0F + ((1.0F - aimingProgress) * (yawMult - 1.0F));
+        float hipFireFactor = yawMult + (aimYawMult - yawMult) * aimingProgress;
         float hipFirePitchFactor = 1.0F + ((1.0F - aimingProgress) * (pitchMult - 1.0F));
 
         float hipRoll = get("hipfireRollFactor", DEFAULT_HIP_ROLL_MULTIPLIER);
@@ -107,16 +104,12 @@ public class GunMovementMixin {
         smoothedRoll = clamp(smoothedRoll, -maxRoll, maxRoll);
 
         poseStack.mulPose(Axis.XP.rotationDegrees(-smoothedPitch * DEFAULT_PITCH_SENSITIVITY));
-        poseStack.mulPose(Axis.YP.rotationDegrees(smoothedYaw * DEFAULT_YAW_SENSITIVITY * hipFireFactor * 0.9f));
+        poseStack.mulPose(Axis.YP.rotationDegrees(smoothedYaw * DEFAULT_YAW_SENSITIVITY));
         poseStack.mulPose(Axis.ZP.rotationDegrees(smoothedRoll * rollSens));
 
         float xOffset = smoothedYaw * 0.012f * hipFireFactor * 0.9f;
         float yOffset = -smoothedPitch * 0.012f * hipFirePitchFactor;
-
         poseStack.translate(xOffset, yOffset, 0);
-
-        lastPitch = currentPitch;
-        lastYaw = currentYaw;
     }
 
     private static float get(String key, float def) {
@@ -127,6 +120,7 @@ public class GunMovementMixin {
                 case "rollSensitivity" -> TacZAdditionsConfig.CLIENT.rollSensitivity.get().floatValue();
                 case "maxTiltAngle" -> TacZAdditionsConfig.CLIENT.maxTiltAngle.get().floatValue();
                 case "hipfireYawMultiplier" -> TacZAdditionsConfig.CLIENT.hipfireYawMultiplier.get().floatValue();
+                case "aimingYawMultiplier" -> TacZAdditionsConfig.CLIENT.aimingYawMultiplier.get().floatValue();
                 case "hipfirePitchMultiplier" -> TacZAdditionsConfig.CLIENT.hipfirePitchMultiplier.get().floatValue();
                 case "dragSmoothing" -> TacZAdditionsConfig.CLIENT.dragSmoothing.get().floatValue();
                 case "decayFactor" -> TacZAdditionsConfig.CLIENT.decayFactor.get().floatValue();
@@ -137,6 +131,7 @@ public class GunMovementMixin {
             return def;
         }
     }
+
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));
     }
