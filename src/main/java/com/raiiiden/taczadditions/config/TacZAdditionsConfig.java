@@ -30,6 +30,7 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue rollSensitivity;
         public final ForgeConfigSpec.DoubleValue maxTiltAngle;
 
+        public final ForgeConfigSpec.DoubleValue aimingYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
 
@@ -55,6 +56,9 @@ public class TacZAdditionsConfig {
             aimingRollFactor = builder
                     .comment("Roll factor when aiming.")
                     .defineInRange("aimingRollFactor", 2.75, 0.0, 10.0);
+            aimingYawMultiplier = builder
+                    .comment("Yaw factor when aiming.")
+                    .defineInRange("aimingYawMultiplier", 0.8, 0.0, 10.0);
 
             rollSensitivity = builder
                     .comment("Sensitivity multiplier for roll rotation.")
@@ -70,7 +74,7 @@ public class TacZAdditionsConfig {
 
             hipfirePitchMultiplier = builder
                     .comment("Pitch multiplier when hip-firing.")
-                    .defineInRange("hipfirePitchMultiplier", 0.7, 0.0, 10.0);
+                    .defineInRange("hipfirePitchMultiplier", 1.2, 0.0, 10.0);
 
             dragSmoothing = builder
                     .comment("Drag smoothing factor (lower = more inertia).")
