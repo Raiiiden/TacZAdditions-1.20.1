@@ -23,7 +23,6 @@ public class TacZAdditionsConfig {
         CLIENT = clientConfig.getLeft();
     }
 
-    // ===== SERVER CONFIG =====
     public static class Server {
         public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
 
@@ -38,27 +37,35 @@ public class TacZAdditionsConfig {
         }
     }
 
-    // ===== CLIENT CONFIG =====
     public static class Client {
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
+        public final ForgeConfigSpec.BooleanValue enableStrafeMovement;
 
-        // Hipfire Section
+        // Strafing - Hipfire
+        public final ForgeConfigSpec.DoubleValue strafeYawMultiplier;
+        public final ForgeConfigSpec.DoubleValue strafeRollMultiplier;
+
+        // Strafing - Aiming
+        public final ForgeConfigSpec.DoubleValue aimStrafeYawMultiplier;
+        public final ForgeConfigSpec.DoubleValue aimStrafeRollMultiplier;
+
+        // Hipfire
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfireRollFactor;
 
-        // Aiming Section
+        // Aiming
         public final ForgeConfigSpec.DoubleValue aimingYawMultiplier;
         public final ForgeConfigSpec.DoubleValue aimingRollFactor;
 
-        // Recoil Section
+        // Recoil
         public final ForgeConfigSpec.DoubleValue recoilVisualX;
         public final ForgeConfigSpec.DoubleValue recoilVisualY;
         public final ForgeConfigSpec.DoubleValue recoilVisualZ;
         public final ForgeConfigSpec.DoubleValue recoilCameraMultiplier;
 
-        // Misc Movement (no category)
+        // Misc
         public final ForgeConfigSpec.DoubleValue dragSmoothing;
         public final ForgeConfigSpec.DoubleValue decayFactor;
         public final ForgeConfigSpec.DoubleValue momentumFactor;
@@ -75,6 +82,10 @@ public class TacZAdditionsConfig {
             enableGunMovement = builder
                     .comment("If false, disables all gun movement (sway, roll, etc).")
                     .define("enableGunMovement", true);
+
+            enableStrafeMovement = builder
+                    .comment("If false, disables sway/roll from strafing movement.")
+                    .define("enableStrafeMovement", false);
 
             builder.push("hipfire");
             hipfireYawMultiplier = builder
@@ -95,6 +106,21 @@ public class TacZAdditionsConfig {
             aimingRollFactor = builder
                     .comment("Roll factor when aiming.")
                     .defineInRange("rollFactor", 2.75, 0.0, 10.0);
+            builder.pop();
+
+            builder.push("strafe");
+            strafeYawMultiplier = builder
+                    .comment("Yaw sway from strafing while hip-firing.")
+                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 10.0);
+            strafeRollMultiplier = builder
+                    .comment("Roll tilt from strafing while hip-firing.")
+                    .defineInRange("hipfireRollMultiplier", 3.0, 0.0, 10.0);
+            aimStrafeYawMultiplier = builder
+                    .comment("Yaw sway from strafing while aiming.")
+                    .defineInRange("aimingYawMultiplier", 3.0, 0.0, 10.0);
+            aimStrafeRollMultiplier = builder
+                    .comment("Roll tilt from strafing while aiming.")
+                    .defineInRange("aimingRollMultiplier", 3.0, 0.0, 10.0);
             builder.pop();
 
             builder.push("recoil");

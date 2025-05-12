@@ -9,6 +9,7 @@ import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemDisplayContext;
 import net.minecraft.world.item.ItemStack;
 import org.spongepowered.asm.mixin.Mixin;
@@ -42,6 +43,12 @@ public class GunMovementMixin {
     private static float pitchVelocity = 0;
     private static float yawVelocity = 0;
     private static float rollVelocity = 0;
+
+    private static float smoothedStrafeYaw = 0;
+    private static float smoothedStrafeRoll = 0;
+    private static float strafeYawVelocity = 0;
+    private static float strafeRollVelocity = 0;
+
     private static float lastPitch = 0;
     private static float lastYaw = 0;
     private static long lastFrameTime = 0;
@@ -111,6 +118,35 @@ public class GunMovementMixin {
         float yOffset = -smoothedPitch * 0.012f * hipFirePitchFactor;
         poseStack.translate(xOffset, yOffset, 0);
 
+        // --- Strafing movement (smooth like pitch/yaw) ---
+        if (TacZAdditionsConfig.CLIENT.enableStrafeMovement.get()) {
+            float strafeInput = Mth.clamp(player.xxa, -1f, 1f);
+
+            float strafeYawFactor = lerp(aimingProgress,
+                    TacZAdditionsConfig.CLIENT.aimStrafeYawMultiplier.get().floatValue(),
+                    TacZAdditionsConfig.CLIENT.strafeYawMultiplier.get().floatValue());
+
+            float strafeRollFactor = lerp(aimingProgress,
+                    TacZAdditionsConfig.CLIENT.aimStrafeRollMultiplier.get().floatValue(),
+                    TacZAdditionsConfig.CLIENT.strafeRollMultiplier.get().floatValue());
+
+            float strafeTargetYaw = strafeInput * strafeYawFactor;
+            float strafeTargetRoll = strafeInput * strafeRollFactor;
+
+            strafeYawVelocity = strafeYawVelocity * 0.85f + (strafeTargetYaw - smoothedStrafeYaw) * drag;
+            strafeRollVelocity = strafeRollVelocity * 0.85f + (strafeTargetRoll - smoothedStrafeRoll) * drag;
+
+            smoothedStrafeYaw += strafeYawVelocity * momentum;
+            smoothedStrafeRoll += strafeRollVelocity * momentum;
+
+            smoothedStrafeYaw *= Math.pow(decay, timeFactor);
+            smoothedStrafeRoll *= Math.pow(decay, timeFactor);
+
+            poseStack.mulPose(Axis.YP.rotationDegrees(smoothedStrafeYaw));
+            poseStack.mulPose(Axis.ZP.rotationDegrees(smoothedStrafeRoll));
+        }
+
+        // --- Recoil translation ---
         float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
         if (recoilProgress > 0f) {
             recoilProgress *= recoilProgress;
@@ -147,5 +183,9 @@ public class GunMovementMixin {
 
     private static float clamp(float value, float min, float max) {
         return Math.max(min, Math.min(max, value));
+    }
+
+    private static float lerp(float alpha, float from, float to) {
+        return from + (to - from) * (1.0f - alpha);
     }
 }
