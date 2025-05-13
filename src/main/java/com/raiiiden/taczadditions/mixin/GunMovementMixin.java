@@ -133,14 +133,22 @@ public class GunMovementMixin {
             float strafeTargetYaw = strafeInput * strafeYawFactor;
             float strafeTargetRoll = strafeInput * strafeRollFactor;
 
-            strafeYawVelocity = strafeYawVelocity * 0.85f + (strafeTargetYaw - smoothedStrafeYaw) * drag;
-            strafeRollVelocity = strafeRollVelocity * 0.85f + (strafeTargetRoll - smoothedStrafeRoll) * drag;
+            float strafeDrag = get("strafeSmoothing", 0.15f);
 
-            smoothedStrafeYaw += strafeYawVelocity * momentum;
-            smoothedStrafeRoll += strafeRollVelocity * momentum;
+            // Apply smoothing with separate strafe smoothing factor
+            strafeYawVelocity = strafeYawVelocity * 0.85f + (strafeTargetYaw - smoothedStrafeYaw) * strafeDrag * timeFactor;
+            strafeRollVelocity = strafeRollVelocity * 0.85f + (strafeTargetRoll - smoothedStrafeRoll) * strafeDrag * timeFactor;
+
+            smoothedStrafeYaw += strafeYawVelocity * momentum * timeFactor;
+            smoothedStrafeRoll += strafeRollVelocity * momentum * timeFactor;
 
             smoothedStrafeYaw *= Math.pow(decay, timeFactor);
             smoothedStrafeRoll *= Math.pow(decay, timeFactor);
+
+            float maxStrafeYaw = TacZAdditionsConfig.CLIENT.maxStrafeYaw.get().floatValue();
+            float maxStrafeRoll = TacZAdditionsConfig.CLIENT.maxStrafeRoll.get().floatValue();
+            smoothedStrafeYaw = clamp(smoothedStrafeYaw, -maxStrafeYaw, maxStrafeYaw);
+            smoothedStrafeRoll = clamp(smoothedStrafeRoll, -maxStrafeRoll, maxStrafeRoll);
 
             poseStack.mulPose(Axis.YP.rotationDegrees(smoothedStrafeYaw));
             poseStack.mulPose(Axis.ZP.rotationDegrees(smoothedStrafeRoll));
@@ -174,6 +182,7 @@ public class GunMovementMixin {
                 case "dragSmoothing" -> TacZAdditionsConfig.CLIENT.dragSmoothing.get().floatValue();
                 case "decayFactor" -> TacZAdditionsConfig.CLIENT.decayFactor.get().floatValue();
                 case "momentumFactor" -> TacZAdditionsConfig.CLIENT.momentumFactor.get().floatValue();
+                case "strafeSmoothing" -> TacZAdditionsConfig.CLIENT.strafeSmoothing.get().floatValue();
                 default -> def;
             };
         } catch (Exception e) {

@@ -50,6 +50,11 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue aimStrafeYawMultiplier;
         public final ForgeConfigSpec.DoubleValue aimStrafeRollMultiplier;
 
+       // Strafing - Limits
+       public final ForgeConfigSpec.DoubleValue maxStrafeYaw;
+       public final ForgeConfigSpec.DoubleValue maxStrafeRoll;
+       public final ForgeConfigSpec.DoubleValue strafeSmoothing;
+
         // Hipfire
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
@@ -111,16 +116,25 @@ public class TacZAdditionsConfig {
             builder.push("strafe");
             strafeYawMultiplier = builder
                     .comment("Yaw sway from strafing while hip-firing.")
-                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 20.0);
+                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 40.0);
             strafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while hip-firing.")
-                    .defineInRange("hipfireRollMultiplier", 3.0, 0.0, 20.0);
+                    .defineInRange("hipfireRollMultiplier", 20.0, 0.0, 40.0);
             aimStrafeYawMultiplier = builder
                     .comment("Yaw sway from strafing while aiming.")
-                    .defineInRange("aimingYawMultiplier", 0.0, 0.0, 20.0);
+                    .defineInRange("aimingYawMultiplier", 0.0, 0.0, 40.0);
             aimStrafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while aiming.")
-                    .defineInRange("aimingRollMultiplier", 10.0, 0.0, 20.0);
+                    .defineInRange("aimingRollMultiplier", 10.0, 0.0, 40.0);
+            maxStrafeYaw = builder
+                    .comment("Maximum yaw offset from strafing (degrees)")
+                    .defineInRange("maxStrafeYaw", 6.0, 0.0, 20.0);
+            maxStrafeRoll = builder
+                    .comment("Maximum roll angle from strafing (degrees)")
+                    .defineInRange("maxStrafeRoll", 20.0, 0.0, 40.0);
+            strafeSmoothing = builder
+                    .comment("Smoothing factor for strafe movement (higher = more responsive, lower = smoother)")
+                    .defineInRange("strafeSmoothing", 0.15, 0.01, 1.0);
             builder.pop();
 
             builder.push("recoil");
