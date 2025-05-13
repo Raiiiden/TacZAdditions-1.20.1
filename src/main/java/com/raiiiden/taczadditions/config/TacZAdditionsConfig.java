@@ -102,7 +102,7 @@ public class TacZAdditionsConfig {
             builder.push("aim");
             aimingYawMultiplier = builder
                     .comment("Yaw multiplier when aiming.")
-                    .defineInRange("yawMultiplier", 0.8, 0.0, 10.0);
+                    .defineInRange("yawMultiplier", 0.6, 0.0, 10.0);
             aimingRollFactor = builder
                     .comment("Roll factor when aiming.")
                     .defineInRange("rollFactor", 2.75, 0.0, 10.0);
@@ -111,22 +111,22 @@ public class TacZAdditionsConfig {
             builder.push("strafe");
             strafeYawMultiplier = builder
                     .comment("Yaw sway from strafing while hip-firing.")
-                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 10.0);
+                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 20.0);
             strafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while hip-firing.")
-                    .defineInRange("hipfireRollMultiplier", 3.0, 0.0, 10.0);
+                    .defineInRange("hipfireRollMultiplier", 3.0, 0.0, 20.0);
             aimStrafeYawMultiplier = builder
                     .comment("Yaw sway from strafing while aiming.")
-                    .defineInRange("aimingYawMultiplier", 3.0, 0.0, 10.0);
+                    .defineInRange("aimingYawMultiplier", 0.0, 0.0, 20.0);
             aimStrafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while aiming.")
-                    .defineInRange("aimingRollMultiplier", 3.0, 0.0, 10.0);
+                    .defineInRange("aimingRollMultiplier", 10.0, 0.0, 20.0);
             builder.pop();
 
             builder.push("recoil");
             recoilVisualX = builder
                     .comment("Visual recoil X multiplier (left-right shake)")
-                    .defineInRange("visualX", 1.0, 0.0, 10.0);
+                    .defineInRange("visualX", 0.0, 0.0, 10.0);
             recoilVisualY = builder
                     .comment("Visual recoil Y multiplier (vertical bounce)")
                     .defineInRange("visualY", 1.0, 0.0, 10.0);
