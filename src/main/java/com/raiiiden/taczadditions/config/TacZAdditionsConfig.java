@@ -41,6 +41,7 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
         public final ForgeConfigSpec.BooleanValue enableStrafeMovement;
+        public final ForgeConfigSpec.BooleanValue enableScopeSway;
 
         // Strafing - Hipfire
         public final ForgeConfigSpec.DoubleValue strafeYawMultiplier;
@@ -90,7 +91,11 @@ public class TacZAdditionsConfig {
 
             enableStrafeMovement = builder
                     .comment("If false, disables sway/roll from strafing movement.")
-                    .define("enableStrafeMovement", false);
+                    .define("enableStrafeMovement", true);
+
+            enableScopeSway = builder
+                    .comment("Enable subtle camera sway when aiming with high-magnification scopes (4x+)")
+                    .define("enableScopeSway", true);
 
             builder.push("hipfire");
             hipfireYawMultiplier = builder
@@ -116,7 +121,7 @@ public class TacZAdditionsConfig {
             builder.push("strafe");
             strafeYawMultiplier = builder
                     .comment("Yaw sway from strafing while hip-firing.")
-                    .defineInRange("hipfireYawMultiplier", 3.0, 0.0, 40.0);
+                    .defineInRange("hipfireYawMultiplier", 0.0, 0.0, 40.0);
             strafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while hip-firing.")
                     .defineInRange("hipfireRollMultiplier", 20.0, 0.0, 40.0);
@@ -125,7 +130,7 @@ public class TacZAdditionsConfig {
                     .defineInRange("aimingYawMultiplier", 0.0, 0.0, 40.0);
             aimStrafeRollMultiplier = builder
                     .comment("Roll tilt from strafing while aiming.")
-                    .defineInRange("aimingRollMultiplier", 10.0, 0.0, 40.0);
+                    .defineInRange("aimingRollMultiplier", 20.0, 0.0, 40.0);
             maxStrafeYaw = builder
                     .comment("Maximum yaw offset from strafing (degrees)")
                     .defineInRange("maxStrafeYaw", 6.0, 0.0, 20.0);
