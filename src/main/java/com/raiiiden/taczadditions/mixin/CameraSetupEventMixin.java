@@ -13,10 +13,16 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.Random;
+
 @Mixin(CameraSetupEvent.class)
 public class CameraSetupEventMixin {
 
     private static float swayTimer = 0f;
+    private static long crouchStartTime = 0;
+    private static long crouchCooldownEnd = 0;
+
+    private static final Random rand = new Random();
 
     @Inject(method = "applyLevelCameraAnimation", at = @At("TAIL"), remap = false)
     private static void injectScopeSway(ViewportEvent.ComputeCameraAngles event, CallbackInfo ci) {
@@ -36,16 +42,49 @@ public class CameraSetupEventMixin {
         float aim = op.getClientAimingProgress(Minecraft.getInstance().getFrameTime());
         if (aim < 0.95f) return;
 
-        float strength = TacZAdditionsConfig.CLIENT.scopeSwayStrength.get().floatValue();
-        float speed = TacZAdditionsConfig.CLIENT.scopeSwaySpeed.get().floatValue();
+        float baseStrength = TacZAdditionsConfig.CLIENT.scopeSwayStrength.get().floatValue();
+        float baseSpeed = TacZAdditionsConfig.CLIENT.scopeSwaySpeed.get().floatValue();
 
         float delta = Minecraft.getInstance().getDeltaFrameTime();
         swayTimer += delta;
 
-        float time = (swayTimer / speed) * (float) Math.PI * 2f;
+        long now = System.currentTimeMillis();
+        boolean crouching = player.isCrouching();
 
-        float pitch = (float) Math.sin(time * 0.7f) * strength;
-        float yaw   = (float) Math.sin(time * 0.45f + 1.3f) * strength;
+        float swayMult = 1f;
+        float speedMult = 1f;
+
+        if (crouching && now >= crouchCooldownEnd) {
+            if (crouchStartTime == 0) {
+                crouchStartTime = now;
+            }
+
+            long crouchDuration = now - crouchStartTime;
+
+            if (crouchDuration <= 3000) {
+                swayMult = 0.25f; // stabilized
+            } else if (crouchDuration <= 6000) {
+                // sporadic phase
+                swayMult = 1.6f + rand.nextFloat() * 0.6f;
+                speedMult = 0.65f; // faster sway
+            } else {
+                crouchCooldownEnd = now + 8000; // cooldown before stabilizing again
+                crouchStartTime = 0;
+            }
+
+        } else {
+            crouchStartTime = 0;
+        }
+
+        float time = (swayTimer / (baseSpeed * speedMult)) * (float) Math.PI * 2f;
+
+        float pitch = (float) Math.sin(time * 0.7f) * baseStrength * swayMult;
+        float yaw   = (float) Math.sin(time * 0.45f + 1.3f) * baseStrength * swayMult;
+
+        if (swayMult > 1.1f) {
+            pitch += (rand.nextFloat() - 0.5f) * baseStrength * 0.3f;
+            yaw += (rand.nextFloat() - 0.5f) * baseStrength * 0.3f;
+        }
 
         player.setXRot(player.getXRot() + pitch);
         player.setYRot(player.getYRot() + yaw);
