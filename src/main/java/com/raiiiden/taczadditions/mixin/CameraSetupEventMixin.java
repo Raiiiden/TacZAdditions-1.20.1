@@ -18,10 +18,6 @@ public class CameraSetupEventMixin {
 
     private static float swayTimer = 0f;
 
-    // Independent speed and strength control
-    private static final float STRENGTH = 0.01f; // arc size (degrees)
-    private static final float SPEED = 40.2f;     // seconds per sway cycle (lower = faster)
-
     @Inject(method = "applyLevelCameraAnimation", at = @At("TAIL"), remap = false)
     private static void injectScopeSway(ViewportEvent.ComputeCameraAngles event, CallbackInfo ci) {
         if (!TacZAdditionsConfig.CLIENT.enableScopeSway.get()) return;
@@ -33,20 +29,23 @@ public class CameraSetupEventMixin {
         if (!(main.getItem() instanceof IGun iGun)) return;
 
         float zoom = iGun.getAimingZoom(main);
-        if (zoom < 4.0f) return;
+        float minZoom = TacZAdditionsConfig.CLIENT.scopeSwayMinZoom.get().floatValue();
+        if (zoom < minZoom) return;
 
         IClientPlayerGunOperator op = IClientPlayerGunOperator.fromLocalPlayer(player);
         float aim = op.getClientAimingProgress(Minecraft.getInstance().getFrameTime());
         if (aim < 0.95f) return;
 
-        float delta = Minecraft.getInstance().getDeltaFrameTime(); // ~1/60th of a second
+        float strength = TacZAdditionsConfig.CLIENT.scopeSwayStrength.get().floatValue();
+        float speed = TacZAdditionsConfig.CLIENT.scopeSwaySpeed.get().floatValue();
+
+        float delta = Minecraft.getInstance().getDeltaFrameTime();
         swayTimer += delta;
 
-        // Normalize to looping 0–2π (loop every SPEED seconds)
-        float time = (swayTimer / SPEED) * (float) Math.PI * 2f;
+        float time = (swayTimer / speed) * (float) Math.PI * 2f;
 
-        float pitch = (float) Math.sin(time * 0.7f) * STRENGTH;
-        float yaw   = (float) Math.sin(time * 0.45f + 1.3f) * STRENGTH;
+        float pitch = (float) Math.sin(time * 0.7f) * strength;
+        float yaw   = (float) Math.sin(time * 0.45f + 1.3f) * strength;
 
         player.setXRot(player.getXRot() + pitch);
         player.setYRot(player.getYRot() + yaw);

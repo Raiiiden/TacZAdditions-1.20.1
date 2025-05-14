@@ -56,6 +56,11 @@ public class TacZAdditionsConfig {
        public final ForgeConfigSpec.DoubleValue maxStrafeRoll;
        public final ForgeConfigSpec.DoubleValue strafeSmoothing;
 
+        // Scope Sway
+        public final ForgeConfigSpec.DoubleValue scopeSwayStrength;
+        public final ForgeConfigSpec.DoubleValue scopeSwaySpeed;
+        public final ForgeConfigSpec.DoubleValue scopeSwayMinZoom;
+
         // Hipfire
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
@@ -155,6 +160,21 @@ public class TacZAdditionsConfig {
             recoilCameraMultiplier = builder
                     .comment("Camera kick recoil multiplier (pitch/yaw)")
                     .defineInRange("cameraMultiplier", 1.0, 0.0, 10.0);
+            builder.pop();
+
+            builder.push("scopeSway");
+
+            scopeSwayStrength = builder
+                    .comment("Maximum sway arc when scoped (degrees)")
+                    .defineInRange("strength", 0.01, 0.0, 1.0);
+
+            scopeSwaySpeed = builder
+                    .comment("Seconds per full sway cycle")
+                    .defineInRange("speed", 40.2, 1.0, 120.0);
+
+            scopeSwayMinZoom = builder
+                    .comment("Minimum zoom level required before scope sway activates")
+                    .defineInRange("minZoom", 4.0, 1.0, 100.0);
             builder.pop();
 
             dragSmoothing = builder

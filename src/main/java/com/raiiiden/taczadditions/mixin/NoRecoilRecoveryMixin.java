@@ -33,37 +33,38 @@ public class NoRecoilRecoveryMixin {
      */
     @Inject(method = "applyCameraRecoil", at = @At("HEAD"), cancellable = true, remap = false)
     private static void applyCustomRecoil(ViewportEvent.ComputeCameraAngles event, CallbackInfo ci) {
-        // Get the config value for recoil recovery
         boolean recoilRecoveryEnabled = TacZAdditionsConfig.CLIENT.enableRecoilRecovery.get();
-
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
 
         long timeTotal = System.currentTimeMillis() - shootTimeStamp;
 
-        // Process pitch recoil
+        if (!recoilRecoveryEnabled && timeTotal > 150) {
+            ci.cancel();
+            return;
+        }
+
         if (pitchSplineFunction != null && pitchSplineFunction.isValidPoint(timeTotal)) {
             double newPitchValue = pitchSplineFunction.value(timeTotal);
             double deltaPitch = newPitchValue - xRotO;
-            // If recovery is disabled, ignore negative delta (do not let the view recover).
+
             if (!recoilRecoveryEnabled && deltaPitch < 0) {
-                deltaPitch = 0;
+            } else {
+                player.setXRot(player.getXRot() - (float) deltaPitch);
+                xRotO = newPitchValue;
             }
-            player.setXRot(player.getXRot() - (float) deltaPitch);
-            xRotO = newPitchValue;
         }
 
-        // Process yaw recoil similarly ish
         if (yawSplineFunction != null && yawSplineFunction.isValidPoint(timeTotal)) {
             double newYawValue = yawSplineFunction.value(timeTotal);
             double deltaYaw = newYawValue - yRotO;
-            if (!recoilRecoveryEnabled && deltaYaw < 0) {
-                deltaYaw = 0;
-            }
-            player.setYRot(player.getYRot() - (float) deltaYaw);
-            yRotO = newYawValue;
-        }
 
+            if (!recoilRecoveryEnabled && deltaYaw < 0) {
+            } else {
+                player.setYRot(player.getYRot() - (float) deltaYaw);
+                yRotO = newYawValue;
+            }
+        }
         ci.cancel();
     }
 }
