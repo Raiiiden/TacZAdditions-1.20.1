@@ -61,6 +61,13 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue scopeSwaySpeed;
         public final ForgeConfigSpec.DoubleValue scopeSwayMinZoom;
 
+        public final ForgeConfigSpec.DoubleValue crouchStabilizeTime;
+        public final ForgeConfigSpec.DoubleValue crouchSporadicTime;
+        public final ForgeConfigSpec.DoubleValue crouchCooldownTime;
+
+        public final ForgeConfigSpec.DoubleValue sporadicSwayStrength;
+        public final ForgeConfigSpec.DoubleValue sporadicSwaySpeed;
+
         // Hipfire
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
@@ -175,6 +182,26 @@ public class TacZAdditionsConfig {
             scopeSwayMinZoom = builder
                     .comment("Minimum zoom level required before scope sway activates")
                     .defineInRange("minZoom", 4.0, 1.0, 100.0);
+
+            crouchStabilizeTime = builder
+                    .comment("Milliseconds to hold crouch to stabilize sway")
+                    .defineInRange("crouchStabilizeTime", 3000.0, 0.0, 10000.0);
+
+            crouchSporadicTime = builder
+                    .comment("Milliseconds of sporadic sway after stabilizing")
+                    .defineInRange("crouchSporadicTime", 3000.0, 0.0, 10000.0);
+
+            crouchCooldownTime = builder
+                    .comment("Milliseconds cooldown after sporadic phase before you can stabilize again")
+                    .defineInRange("crouchCooldownTime", 8000.0, 0.0, 20000.0);
+
+            sporadicSwayStrength = builder
+                    .comment("Multiplier for sway strength during sporadic phase")
+                    .defineInRange("sporadicSwayStrength", 7.0, 1.0, 10.0);
+
+            sporadicSwaySpeed = builder
+                    .comment("Multiplier for sway speed during sporadic phase")
+                    .defineInRange("sporadicSwaySpeed", 0.3, 0.1, 5.0);
             builder.pop();
 
             dragSmoothing = builder

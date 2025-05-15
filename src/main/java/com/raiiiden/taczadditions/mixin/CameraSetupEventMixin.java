@@ -54,6 +54,13 @@ public class CameraSetupEventMixin {
         float swayMult = 1f;
         float speedMult = 1f;
 
+        long stabilizeMs = TacZAdditionsConfig.CLIENT.crouchStabilizeTime.get().longValue();
+        long sporadicMs = TacZAdditionsConfig.CLIENT.crouchSporadicTime.get().longValue();
+        long cooldownMs = TacZAdditionsConfig.CLIENT.crouchCooldownTime.get().longValue();
+
+        double sporadicStrength = TacZAdditionsConfig.CLIENT.sporadicSwayStrength.get();
+        double sporadicSpeed = TacZAdditionsConfig.CLIENT.sporadicSwaySpeed.get();
+
         if (crouching && now >= crouchCooldownEnd) {
             if (crouchStartTime == 0) {
                 crouchStartTime = now;
@@ -61,17 +68,15 @@ public class CameraSetupEventMixin {
 
             long crouchDuration = now - crouchStartTime;
 
-            if (crouchDuration <= 3000) {
-                swayMult = 0.25f; // stabilized
-            } else if (crouchDuration <= 6000) {
-                // sporadic phase
-                swayMult = 1.6f + rand.nextFloat() * 0.6f;
-                speedMult = 0.65f; // faster sway
+            if (crouchDuration <= stabilizeMs) {
+                swayMult = 0.25f;
+            } else if (crouchDuration <= stabilizeMs + sporadicMs) {
+                swayMult = (float) sporadicStrength;
+                speedMult = (float) sporadicSpeed;
             } else {
-                crouchCooldownEnd = now + 8000; // cooldown before stabilizing again
+                crouchCooldownEnd = now + cooldownMs;
                 crouchStartTime = 0;
             }
-
         } else {
             crouchStartTime = 0;
         }
@@ -80,11 +85,6 @@ public class CameraSetupEventMixin {
 
         float pitch = (float) Math.sin(time * 0.7f) * baseStrength * swayMult;
         float yaw   = (float) Math.sin(time * 0.45f + 1.3f) * baseStrength * swayMult;
-
-        if (swayMult > 1.1f) {
-            pitch += (rand.nextFloat() - 0.5f) * baseStrength * 0.3f;
-            yaw += (rand.nextFloat() - 0.5f) * baseStrength * 0.3f;
-        }
 
         player.setXRot(player.getXRot() + pitch);
         player.setYRot(player.getYRot() + yaw);
