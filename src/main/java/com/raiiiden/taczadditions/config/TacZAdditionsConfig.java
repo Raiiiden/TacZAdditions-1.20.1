@@ -38,6 +38,7 @@ public class TacZAdditionsConfig {
     }
 
     public static class Client {
+        public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
         public final ForgeConfigSpec.BooleanValue enableStrafeMovement;
@@ -51,10 +52,10 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue aimStrafeYawMultiplier;
         public final ForgeConfigSpec.DoubleValue aimStrafeRollMultiplier;
 
-       // Strafing - Limits
-       public final ForgeConfigSpec.DoubleValue maxStrafeYaw;
-       public final ForgeConfigSpec.DoubleValue maxStrafeRoll;
-       public final ForgeConfigSpec.DoubleValue strafeSmoothing;
+        // Strafing - Limits
+        public final ForgeConfigSpec.DoubleValue maxStrafeYaw;
+        public final ForgeConfigSpec.DoubleValue maxStrafeRoll;
+        public final ForgeConfigSpec.DoubleValue strafeSmoothing;
 
         // Scope Sway
         public final ForgeConfigSpec.DoubleValue scopeSwayStrength;
@@ -93,8 +94,12 @@ public class TacZAdditionsConfig {
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
 
+            enableMuzzleFlash = builder
+                    .comment("If true, enables muzzle flash light rendering.")
+                    .define("enableMuzzleFlash", true);
+
             enableRecoilRecovery = builder
-                    .comment("If true, recoil recovery is enabled.")
+                    .comment("If true, recoil recovery is enabled (Default in TaCZ), disable to make recoil harder to control.")
                     .define("enableRecoilRecovery", true);
 
             enableGunMovement = builder
@@ -170,35 +175,27 @@ public class TacZAdditionsConfig {
             builder.pop();
 
             builder.push("scopeSway");
-
             scopeSwayStrength = builder
                     .comment("Maximum sway arc when scoped (degrees)")
                     .defineInRange("strength", 0.01, 0.0, 1.0);
-
             scopeSwaySpeed = builder
                     .comment("Seconds per full sway cycle")
                     .defineInRange("speed", 40.2, 1.0, 120.0);
-
             scopeSwayMinZoom = builder
                     .comment("Minimum zoom level required before scope sway activates")
                     .defineInRange("minZoom", 4.0, 1.0, 100.0);
-
             crouchStabilizeTime = builder
                     .comment("Milliseconds to hold crouch to stabilize sway")
                     .defineInRange("crouchStabilizeTime", 3000.0, 0.0, 10000.0);
-
             crouchSporadicTime = builder
                     .comment("Milliseconds of sporadic sway after stabilizing")
                     .defineInRange("crouchSporadicTime", 3000.0, 0.0, 10000.0);
-
             crouchCooldownTime = builder
                     .comment("Milliseconds cooldown after sporadic phase before you can stabilize again")
                     .defineInRange("crouchCooldownTime", 8000.0, 0.0, 20000.0);
-
             sporadicSwayStrength = builder
                     .comment("Multiplier for sway strength during sporadic phase")
                     .defineInRange("sporadicSwayStrength", 7.0, 1.0, 10.0);
-
             sporadicSwaySpeed = builder
                     .comment("Multiplier for sway speed during sporadic phase")
                     .defineInRange("sporadicSwaySpeed", 0.3, 0.1, 5.0);
@@ -207,19 +204,15 @@ public class TacZAdditionsConfig {
             dragSmoothing = builder
                     .comment("Drag smoothing factor (lower = more inertia).")
                     .defineInRange("dragSmoothing", 0.2, 0.0, 1.0);
-
             decayFactor = builder
                     .comment("Decay factor for motion smoothing.")
                     .defineInRange("decayFactor", 0.85, 0.0, 1.0);
-
             momentumFactor = builder
                     .comment("Velocity influence on final position.")
                     .defineInRange("momentumFactor", 0.45, 0.0, 1.0);
-
             rollSensitivity = builder
                     .comment("Roll rotation sensitivity.")
                     .defineInRange("rollSensitivity", 1.2, 0.0, 10.0);
-
             maxTiltAngle = builder
                     .comment("Maximum roll angle (degrees).")
                     .defineInRange("maxTiltAngle", 20.0, 0.0, 180.0);

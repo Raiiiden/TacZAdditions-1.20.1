@@ -1,20 +1,19 @@
 package com.raiiiden.taczadditions.network;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerPlayer;
+import net.minecraft.core.BlockPos;
+import net.minecraft.world.entity.player.Player;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
 import net.minecraftforge.network.NetworkDirection;
-import net.minecraft.network.FriendlyByteBuf;
-import net.minecraftforge.network.NetworkEvent;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
 
 import java.util.Optional;
-import java.util.function.Supplier;
 
 public class ModNetworking {
     private static final String PROTOCOL_VERSION = "1.0";
+
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("taczadditions", "network"),
             () -> PROTOCOL_VERSION,
@@ -34,7 +33,9 @@ public class ModNetworking {
         );
     }
 
-    public static void sendMuzzleFlash(Player player, BlockPos pos, int lightLevel) {
-        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> player), new MuzzleFlashPacket(pos, lightLevel));
+    public static void sendMuzzleFlash(Player shooter, BlockPos pos, int lightLevel) {
+        if (!(shooter instanceof ServerPlayer serverPlayer)) return;
+        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
+                new MuzzleFlashPacket(pos, lightLevel));
     }
 }
