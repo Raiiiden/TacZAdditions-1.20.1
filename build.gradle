@@ -141,9 +141,9 @@ dependencies {
     implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:6518539")
     implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation fg.deobf("curse.maven:configured-457570:5180900")
-    implementation fg.deobf("curse.maven:maxstuff-1199923:6193883")
-    implementation fg.deobf("curse.maven:tacz-endless-ammo-1166149:6122872")
-    implementation fg.deobf("curse.maven:tacz-lesraisins-tactical-equipements-1273094:6566681")
+    //implementation fg.deobf("curse.maven:maxstuff-1199923:6193883")
+    //implementation fg.deobf("curse.maven:tacz-endless-ammo-1166149:6122872")
+    //implementation fg.deobf("curse.maven:tacz-lesraisins-tactical-equipements-1273094:6566681")
 
     annotationProcessor "org.spongepowered:mixin:0.8.5:processor"
     // For more info:

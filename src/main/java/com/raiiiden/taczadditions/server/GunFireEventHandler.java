@@ -26,6 +26,7 @@ public class GunFireEventHandler {
 
         LivingEntity shooter = event.getShooter();
         ItemStack gun = event.getGunItemStack();
+        if (gun.getOrCreateTag().getByte("Jammed") != 0) return;
 
         int lightLevel = isSilenced(gun) ? 6 : 15;
 

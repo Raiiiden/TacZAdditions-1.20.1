@@ -25,6 +25,7 @@ public class TacZAdditionsConfig {
 
     public static class Server {
         public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
+        public final ForgeConfigSpec.DoubleValue recoilCameraMultiplier;
 
         public Server(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Server Config").push("server");
@@ -32,6 +33,10 @@ public class TacZAdditionsConfig {
             enableMuzzleFlash = builder
                     .comment("If false, muzzle flash will not be sent to clients.")
                     .define("enableMuzzleFlash", true);
+
+            recoilCameraMultiplier = builder
+                    .comment("Multiplier for camera recoil intensity, pitch/yaw (affects all clients).")
+                    .defineInRange("recoilCameraMultiplier", 1.0, 0.0, 10.0);
 
             builder.pop();
         }
@@ -82,7 +87,6 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue recoilVisualX;
         public final ForgeConfigSpec.DoubleValue recoilVisualY;
         public final ForgeConfigSpec.DoubleValue recoilVisualZ;
-        public final ForgeConfigSpec.DoubleValue recoilCameraMultiplier;
 
         // Misc
         public final ForgeConfigSpec.DoubleValue dragSmoothing;
@@ -165,13 +169,10 @@ public class TacZAdditionsConfig {
                     .defineInRange("visualX", 0.0, 0.0, 10.0);
             recoilVisualY = builder
                     .comment("Visual recoil Y multiplier (vertical bounce)")
-                    .defineInRange("visualY", 1.0, 0.0, 10.0);
+                    .defineInRange("visualY", 0.0, 0.0, 10.0);
             recoilVisualZ = builder
                     .comment("Visual recoil Z multiplier (kickback)")
-                    .defineInRange("visualZ", 1.0, 0.0, 10.0);
-            recoilCameraMultiplier = builder
-                    .comment("Camera kick recoil multiplier (pitch/yaw)")
-                    .defineInRange("cameraMultiplier", 1.0, 0.0, 10.0);
+                    .defineInRange("visualZ", 0.0, 0.0, 10.0);
             builder.pop();
 
             builder.push("scopeSway");

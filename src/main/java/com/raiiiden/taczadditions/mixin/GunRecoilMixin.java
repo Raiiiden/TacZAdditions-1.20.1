@@ -18,7 +18,7 @@ public class GunRecoilMixin {
             remap = false
     )
     private float applyConfigMultiplier(float modifier) {
-        float configMult = TacZAdditionsConfig.CLIENT.recoilCameraMultiplier.get().floatValue();
+        float configMult = TacZAdditionsConfig.SERVER.recoilCameraMultiplier.get().floatValue();
         return modifier * configMult;
     }
 }
