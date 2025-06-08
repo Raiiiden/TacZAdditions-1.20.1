@@ -62,7 +62,7 @@ public class MagazineTextOverlayMixin {
                     (basePart == null ? " missing basePart" : " using basePart: " + basePart.name)
             );
             if (root != null) {
-                logAllPartPositions(root, "");
+                //logAllPartPositions(root, "");
             } else {
                 System.out.println("Root node is null.");
             }
@@ -190,11 +190,11 @@ public class MagazineTextOverlayMixin {
         return null;
     }
 
-    private void logAllPartPositions(BedrockPart part, String indent) {
-        Vector3f pos = getAnimatedPosition(part);
-        System.out.printf("%sPart '%s' -> (%.4f, %.4f, %.4f)%n", indent, part.name, pos.x, pos.y, pos.z);
-        for (BedrockPart child : part.children) {
-            logAllPartPositions(child, indent + "  ");
-        }
-    }
+//    private void logAllPartPositions(BedrockPart part, String indent) {
+//        Vector3f pos = getAnimatedPosition(part);
+//        System.out.printf("%sPart '%s' -> (%.4f, %.4f, %.4f)%n", indent, part.name, pos.x, pos.y, pos.z);
+//        for (BedrockPart child : part.children) {
+//            logAllPartPositions(child, indent + "  ");
+//        }
+//    }
 }
