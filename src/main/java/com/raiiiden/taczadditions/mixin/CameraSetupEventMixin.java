@@ -1,9 +1,14 @@
 package com.raiiiden.taczadditions.mixin;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
+import com.raiiiden.taczadditions.util.CurrentGunStack;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
+import com.tacz.guns.api.event.common.GunFireEvent;
 import com.tacz.guns.api.item.IGun;
+import com.tacz.guns.api.item.gun.FireMode;
 import com.tacz.guns.client.event.CameraSetupEvent;
+import com.tacz.guns.entity.shooter.ShooterDataHolder;
+import com.tacz.guns.resource.pojo.data.gun.GunRecoil;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.world.item.ItemStack;
@@ -21,9 +26,9 @@ public class CameraSetupEventMixin {
     private static float swayTimer = 0f;
     private static long crouchStartTime = 0;
     private static long crouchCooldownEnd = 0;
-
     private static final Random rand = new Random();
 
+    // --- Scope sway injection ---
     @Inject(method = "applyLevelCameraAnimation", at = @At("TAIL"), remap = false)
     private static void injectScopeSway(ViewportEvent.ComputeCameraAngles event, CallbackInfo ci) {
         if (!TacZAdditionsConfig.CLIENT.enableScopeSway.get()) return;
@@ -88,5 +93,16 @@ public class CameraSetupEventMixin {
 
         player.setXRot(player.getXRot() + pitch);
         player.setYRot(player.getYRot() + yaw);
+    }
+
+    @Inject(method = "initialCameraRecoil", at = @At("HEAD"), remap = false)
+    private static void setCurrentGunStack(GunFireEvent event, CallbackInfo ci) {
+        ItemStack stack = event.getShooter().getMainHandItem();
+        CurrentGunStack.set(stack);
+    }
+
+    @Inject(method = "initialCameraRecoil", at = @At("RETURN"), remap = false)
+    private static void clearCurrentGunStack(GunFireEvent event, CallbackInfo ci) {
+        CurrentGunStack.clear();
     }
 }

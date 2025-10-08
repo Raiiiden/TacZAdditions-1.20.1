@@ -11,10 +11,7 @@
     "FirstPersonRenderGunEventInvoker",
     "MagazineTextOverlayMixin",
     "NoRecoilRecoveryMixin",
-    "GunFireMixin",
-    "SoundEngineMixin",
-    "SoundPlayManagerMixin",
-    "GunSoundInstanceStopPatch"
+    "GunFireMixin"
   ],
   "minVersion": "0.8.5"
 }

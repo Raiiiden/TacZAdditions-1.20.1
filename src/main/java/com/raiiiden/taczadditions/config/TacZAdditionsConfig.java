@@ -25,7 +25,23 @@ public class TacZAdditionsConfig {
 
     public static class Server {
         public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
-        public final ForgeConfigSpec.DoubleValue recoilCameraMultiplier;
+        // Category-based vertical recoil
+        public final ForgeConfigSpec.DoubleValue recoilPistolVertical;
+        public final ForgeConfigSpec.DoubleValue recoilRifleVertical;
+        public final ForgeConfigSpec.DoubleValue recoilSniperVertical;
+        public final ForgeConfigSpec.DoubleValue recoilSMGVertical;
+        public final ForgeConfigSpec.DoubleValue recoilShotgunVertical;
+        public final ForgeConfigSpec.DoubleValue recoilRPGVertical;
+        public final ForgeConfigSpec.DoubleValue recoilMGVertical;
+
+        // Category-based horizontal recoil
+        public final ForgeConfigSpec.DoubleValue recoilPistolHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilRifleHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilSniperHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilSMGHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilShotgunHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilRPGHorizontal;
+        public final ForgeConfigSpec.DoubleValue recoilMGHorizontal;
 
         public Server(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Server Config").push("server");
@@ -34,10 +50,51 @@ public class TacZAdditionsConfig {
                     .comment("If false, muzzle flash will not be sent to clients.")
                     .define("enableMuzzleFlash", true);
 
-            recoilCameraMultiplier = builder
-                    .comment("Multiplier for camera recoil intensity, pitch/yaw (affects all clients).")
-                    .defineInRange("recoilCameraMultiplier", 1.0, 0.0, 10.0);
+            // Vertical multipliers
+            recoilPistolVertical = builder
+                    .comment("Vertical recoil multiplier for pistols")
+                    .defineInRange("recoilPistolVertical", 1.0, 0.0, 10.0);
+            recoilRifleVertical = builder
+                    .comment("Vertical recoil multiplier for rifles")
+                    .defineInRange("recoilRifleVertical", 1.0, 0.0, 10.0);
+            recoilSniperVertical = builder
+                    .comment("Vertical recoil multiplier for snipers")
+                    .defineInRange("recoilSniperVertical", 1.0, 0.0, 10.0);
+            recoilSMGVertical = builder
+                    .comment("Vertical recoil multiplier for SMGs")
+                    .defineInRange("recoilSMGVertical", 1.0, 0.0, 10.0);
+            recoilShotgunVertical = builder
+                    .comment("Vertical recoil multiplier for shotguns")
+                    .defineInRange("recoilShotgunVertical", 1.0, 0.0, 10.0);
+            recoilRPGVertical = builder
+                    .comment("Vertical recoil multiplier for RPGs")
+                    .defineInRange("recoilRPGVertical", 1.0, 0.0, 10.0);
+            recoilMGVertical = builder
+                    .comment("Vertical recoil multiplier for MGs")
+                    .defineInRange("recoilMGVertical", 1.0, 0.0, 10.0);
 
+            // Horizontal multipliers
+            recoilPistolHorizontal = builder
+                    .comment("Horizontal recoil multiplier for pistols")
+                    .defineInRange("recoilPistolHorizontal", 1.0, 0.0, 10.0);
+            recoilRifleHorizontal = builder
+                    .comment("Horizontal recoil multiplier for rifles")
+                    .defineInRange("recoilRifleHorizontal", 1.0, 0.0, 10.0);
+            recoilSniperHorizontal = builder
+                    .comment("Horizontal recoil multiplier for snipers")
+                    .defineInRange("recoilSniperHorizontal", 1.0, 0.0, 10.0);
+            recoilSMGHorizontal = builder
+                    .comment("Horizontal recoil multiplier for SMGs")
+                    .defineInRange("recoilSMGHorizontal", 1.0, 0.0, 10.0);
+            recoilShotgunHorizontal = builder
+                    .comment("Horizontal recoil multiplier for shotguns")
+                    .defineInRange("recoilShotgunHorizontal", 1.0, 0.0, 10.0);
+            recoilRPGHorizontal = builder
+                    .comment("Horizontal recoil multiplier for RPGs")
+                    .defineInRange("recoilRPGHorizontal", 1.0, 0.0, 10.0);
+            recoilMGHorizontal = builder
+                    .comment("Horizontal recoil multiplier for MGs")
+                    .defineInRange("recoilMGHorizontal", 1.0, 0.0, 10.0);
             builder.pop();
         }
     }
@@ -78,10 +135,14 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfirePitchMultiplier;
         public final ForgeConfigSpec.DoubleValue hipfireRollFactor;
+        public final ForgeConfigSpec.DoubleValue maxHipPitch;
+        public final ForgeConfigSpec.DoubleValue maxHipYaw;
 
         // Aiming
         public final ForgeConfigSpec.DoubleValue aimingYawMultiplier;
         public final ForgeConfigSpec.DoubleValue aimingRollFactor;
+        public final ForgeConfigSpec.DoubleValue maxAimPitch;
+        public final ForgeConfigSpec.DoubleValue maxAimYaw;
 
         // Recoil
         public final ForgeConfigSpec.DoubleValue recoilVisualX;
@@ -94,6 +155,9 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue momentumFactor;
         public final ForgeConfigSpec.DoubleValue rollSensitivity;
         public final ForgeConfigSpec.DoubleValue maxTiltAngle;
+
+        // Experimental
+        public final ForgeConfigSpec.BooleanValue magazineText;
 
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
@@ -128,6 +192,13 @@ public class TacZAdditionsConfig {
             hipfireRollFactor = builder
                     .comment("Roll factor when hip-firing.")
                     .defineInRange("rollFactor", 2.75, 0.0, 10.0);
+            maxHipPitch = builder
+                    .comment("Maximum pitch offset when hip-firing (degrees)")
+                    .defineInRange("maxHipPitch", 6.0, 0.0, 45.0);
+
+            maxHipYaw = builder
+                    .comment("Maximum yaw offset when hip-firing (degrees)")
+                    .defineInRange("maxHipYaw", 12.0, 0.0, 45.0);
             builder.pop();
 
             builder.push("aim");
@@ -137,6 +208,13 @@ public class TacZAdditionsConfig {
             aimingRollFactor = builder
                     .comment("Roll factor when aiming.")
                     .defineInRange("rollFactor", 2.75, 0.0, 10.0);
+            maxAimPitch = builder
+                    .comment("Maximum pitch offset when aiming (degrees)")
+                    .defineInRange("maxAimPitch", 2.0, 0.0, 45.0);
+
+            maxAimYaw = builder
+                    .comment("Maximum yaw offset when aiming (degrees)")
+                    .defineInRange("maxAimYaw", 10.0, 0.0, 45.0);
             builder.pop();
 
             builder.push("strafe");
@@ -172,7 +250,7 @@ public class TacZAdditionsConfig {
                     .defineInRange("visualY", 0.0, 0.0, 10.0);
             recoilVisualZ = builder
                     .comment("Visual recoil Z multiplier (kickback)")
-                    .defineInRange("visualZ", 0.0, 0.0, 10.0);
+                    .defineInRange("visualZ", 5.0, 0.0, 20.0);
             builder.pop();
 
             builder.push("scopeSway");
@@ -218,6 +296,12 @@ public class TacZAdditionsConfig {
                     .comment("Maximum roll angle (degrees).")
                     .defineInRange("maxTiltAngle", 20.0, 0.0, 180.0);
 
+            builder.pop();
+
+            builder.push("experimental");
+            magazineText = builder
+                    .comment("If true, shows floating magazine ammo text (experimental).")
+                    .define("magazineText", false);
             builder.pop();
         }
     }

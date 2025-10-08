@@ -103,11 +103,20 @@ public class GunMovementMixin {
         smoothedPitch += Math.sin(currentTime * 0.003) * oscillation;
         smoothedYaw += Math.sin(currentTime * 0.002) * oscillation;
 
-        float maxPitch = 10f + (8f * (1.0f - aimingProgress));
-        float maxYaw = 10f + (12f * (1.0f - aimingProgress));
+        float maxPitch = Mth.lerp(
+                aimingProgress,
+                TacZAdditionsConfig.CLIENT.maxHipPitch.get().floatValue(),
+                TacZAdditionsConfig.CLIENT.maxAimPitch.get().floatValue()
+        );
+
+        float maxYaw = Mth.lerp(
+                aimingProgress,
+                TacZAdditionsConfig.CLIENT.maxHipYaw.get().floatValue(),
+                TacZAdditionsConfig.CLIENT.maxAimYaw.get().floatValue()
+        );
 
         smoothedPitch = clamp(smoothedPitch, -maxPitch, maxPitch);
-        smoothedYaw = clamp(smoothedYaw, -maxYaw, maxYaw);
+        smoothedYaw = Mth.lerp(0.1f, smoothedYaw, clamp(smoothedYaw, -maxYaw, maxYaw));
         smoothedRoll = clamp(smoothedRoll, -maxRoll, maxRoll);
 
         poseStack.mulPose(Axis.XP.rotationDegrees(-smoothedPitch * DEFAULT_PITCH_SENSITIVITY));
