@@ -10,7 +10,7 @@ issueTrackerURL=""
 
 [[mods]] #mandatory
 modId="taczadditions" #mandatory
-version="0.7.0" #mandatory
+version="0.8.0" #mandatory
 displayName="TaCZ: Additions" #mandatory
 updateJSONURL=""
 displayURL="https://www.curseforge.com/minecraft/mc-mods/_curseslug_"

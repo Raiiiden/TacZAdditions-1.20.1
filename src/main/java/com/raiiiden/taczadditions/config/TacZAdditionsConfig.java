@@ -158,6 +158,7 @@ public class TacZAdditionsConfig {
 
         // Experimental
         public final ForgeConfigSpec.BooleanValue magazineText;
+        public final ForgeConfigSpec.BooleanValue enableLaserDot;
 
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
@@ -302,6 +303,9 @@ public class TacZAdditionsConfig {
             magazineText = builder
                     .comment("If true, shows floating magazine ammo text (experimental).")
                     .define("magazineText", false);
+            enableLaserDot = builder
+                    .comment("If true, renders laser dot particles when using laser attachments")
+                    .define("enableLaserDot", true);
             builder.pop();
         }
     }
