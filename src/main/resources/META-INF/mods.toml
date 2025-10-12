@@ -1,6 +1,6 @@
 # This is an example mods.toml file. It contains the data relating to the loading mods.
 modLoader="javafml" #mandatory
-license="MIT"
+license="ARR"
 
 # A version range to match for said mod loader - for regular FML @Mod it will be the forge version
 loaderVersion="[6,)" #mandatory
