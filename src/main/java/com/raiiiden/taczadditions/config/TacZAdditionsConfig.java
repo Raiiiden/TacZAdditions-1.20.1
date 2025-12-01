@@ -100,7 +100,6 @@ public class TacZAdditionsConfig {
     }
 
     public static class Client {
-        public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
         public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
         public final ForgeConfigSpec.BooleanValue enableStrafeMovement;
@@ -162,11 +161,6 @@ public class TacZAdditionsConfig {
 
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
-
-            enableMuzzleFlash = builder
-                    .comment("If true, enables muzzle flash light rendering.")
-                    .define("enableMuzzleFlash", true);
-
             enableRecoilRecovery = builder
                     .comment("If true, recoil recovery is enabled (Default in TaCZ), disable to make recoil harder to control.")
                     .define("enableRecoilRecovery", true);

@@ -106,7 +106,7 @@ public class LaserDotHandler {
         double closestDist = Double.MAX_VALUE;
 
         for (Entity entity : player.level().getEntities(player, searchBox, filter)) {
-            AABB entityBox = entity.getBoundingBox().inflate(0.3);
+            AABB entityBox = entity.getBoundingBox().inflate(0.0);
             Optional<Vec3> hitOpt = entityBox.clip(start, end);
 
             if (hitOpt.isPresent()) {
