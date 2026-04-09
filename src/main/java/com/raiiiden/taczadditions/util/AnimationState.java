@@ -9,4 +9,8 @@ public class AnimationState {
     public Vector3f originalLeftHandRot = new Vector3f();
     public long startTime = 0;
     public boolean isAnimating = false;
+
+    // Debug flags to prevent spam
+    public boolean debugPrinted = false;
+    public boolean debugLogged = false;
 }

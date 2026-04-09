@@ -1,10 +1,13 @@
 package com.raiiiden.taczadditions.client;
 
+import com.raiiiden.taczadditions.mixin.MuzzleDirectionMixin;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
+import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
 import com.tacz.guns.util.LaserColorUtil;
 import com.raiiiden.taczadditions.ModParticles;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
+import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.player.Player;
@@ -15,6 +18,7 @@ import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 import net.minecraftforge.fml.common.Mod;
+import org.joml.Vector3f;
 
 import java.util.Optional;
 import java.util.function.Predicate;
@@ -41,8 +45,12 @@ public class LaserDotHandler {
 
             float partialTick = event.getPartialTick();
             Vec3 eyePos = mc.player.getEyePosition(partialTick);
-            Vec3 lookVec = mc.player.getViewVector(partialTick);
-            Vec3 endPos = eyePos.add(lookVec.scale(100.0));
+
+            // Use the gun's actual barrel direction instead of the crosshair look vector.
+            // TaCZ caches the muzzle position in camera space after all bone animations,
+            // so this correctly follows inspect, reload, and sway animations.
+            Vec3 barrelDir = getBarrelDirection(mc, partialTick);
+            Vec3 endPos = eyePos.add(barrelDir.scale(100.0));
 
             // Check for block hit
             BlockHitResult blockHit = mc.level.clip(new ClipContext(
@@ -71,7 +79,7 @@ public class LaserDotHandler {
 
             // Spawn particle with color
             if (hitPos != null) {
-                Vec3 normal = lookVec.normalize().scale(-0.01);
+                Vec3 normal = barrelDir.scale(-0.01);
                 // Pass color as the vx parameter (we reuse it since we don't need velocity)
                 mc.level.addParticle(ModParticles.LASER_DOT.get(),
                         hitPos.x + normal.x,
@@ -80,6 +88,33 @@ public class LaserDotHandler {
                         laserColor, 0, 0); // Color passed here
             }
         }
+    }
+
+    private static Vec3 getBarrelDirection(Minecraft mc, float partialTick) {
+        try {
+            Vector3f muzzle = GunItemRendererWrapper.muzzleRenderOffset;
+            if (muzzle != null && (muzzle.x != 0f || muzzle.y != 0f || muzzle.z != 0f)) {
+                Vector3f fwd = MuzzleCache.muzzleForwardDirection;
+
+                if (fwd.x != 0f || fwd.y != 0f || fwd.z != 0f) {
+                    Camera camera = mc.gameRenderer.getMainCamera();
+                    org.joml.Vector3f left = camera.getLeftVector();
+                    org.joml.Vector3f up   = camera.getUpVector();
+                    org.joml.Vector3f look = camera.getLookVector();
+
+                    double wx = -left.x * fwd.x + up.x * fwd.y - look.x * fwd.z;
+                    double wy = -left.y * fwd.x + up.y * fwd.y - look.y * fwd.z;
+                    double wz = -left.z * fwd.x + up.z * fwd.y - look.z * fwd.z;
+
+                    double len = Math.sqrt(wx * wx + wy * wy + wz * wz);
+                    if (len > 1e-6) {
+                        return new Vec3(-wx / len, -wy / len, -wz / len);
+                    }
+                }
+            }
+        } catch (Exception ignored) {}
+
+        return mc.player.getViewVector(partialTick);
     }
 
     private static int getLaserColor(ItemStack gunStack) {

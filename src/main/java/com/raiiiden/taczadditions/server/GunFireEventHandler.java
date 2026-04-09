@@ -1,6 +1,7 @@
 package com.raiiiden.taczadditions.server;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
+import com.raiiiden.taczadditions.network.ModNetworking;
 import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.event.common.GunFireEvent;
@@ -12,12 +13,23 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerLevel;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
-import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
+import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 
 @Mod.EventBusSubscriber
 public class GunFireEventHandler {
+
+    /**
+     * Detected once at class-load time via Forge's ModList (no reflection needed).
+     *
+     * Priority order:
+     *  1. sodiumdynamiclights — client-side dynamic lights shared via packet; no server blocks.
+     *  2. dynamiclights (Atomicstryker) — server-side entity lighting; registered separately.
+     *  3. Neither — fall back to placing a transient light block via ServerMuzzleFlashManager.
+     */
+    private static final boolean HAS_SODIUM_DL    = ModList.get().isLoaded("sodiumdynamiclights");
+    private static final boolean HAS_ATOMIC_DL    = ModList.get().isLoaded("dynamiclights");
 
     @SubscribeEvent
     public static void onGunFire(GunFireEvent event) {
@@ -30,10 +42,22 @@ public class GunFireEventHandler {
 
         int lightLevel = isSilenced(gun) ? 6 : 15;
 
-        Vec3 muzzleVec = shooter.getEyePosition().add(shooter.getLookAngle().scale(1.0));
-        BlockPos muzzlePos = BlockPos.containing(muzzleVec);
+        if (HAS_SODIUM_DL) {
+            // Send packet — each nearby client will create its own client-side dynamic light.
+            // GunFireLightManager (Atomicstryker) is intentionally NOT called here; both
+            // approaches would double-apply lighting.
+            ModNetworking.sendMuzzleFlash(shooter, lightLevel);
 
-        ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);
+        } else if (HAS_ATOMIC_DL) {
+            // GunFireLightManager is registered on the Forge bus only when this mod is
+            // present (see TaczAdditions.commonSetup), so it's safe to call here.
+            GunFireLightManager.addLight(shooter, lightLevel);
+
+        } else {
+            // No dynamic-light mod — place a transient light block at the muzzle position.
+            BlockPos muzzlePos = BlockPos.containing(shooter.getEyePosition());
+            ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);
+        }
     }
 
     private static boolean isSilenced(ItemStack gun) {
