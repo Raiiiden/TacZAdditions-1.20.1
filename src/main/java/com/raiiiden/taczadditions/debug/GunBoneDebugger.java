@@ -21,11 +21,14 @@ import java.util.Optional;
 @Mod.EventBusSubscriber(modid = TaczAdditions.MODID, value = Dist.CLIENT)
 public class GunBoneDebugger {
 
+    public static boolean enabled = false;
+
     private static long lastLogTime = 0;
-    private static final long LOG_INTERVAL = 2000; // 2 seconds in milliseconds
+    private static final long LOG_INTERVAL = 2000; // 2 seconds
 
     @SubscribeEvent
     public static void onClientTick(TickEvent.ClientTickEvent event) {
+        if (!enabled) return;
         if (event.phase != TickEvent.Phase.END) {
             return;
         }

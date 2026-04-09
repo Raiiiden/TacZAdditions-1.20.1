@@ -12,7 +12,8 @@
     "MagazineTextOverlayMixin",
     "NoRecoilRecoveryMixin",
     "GunFireMixin",
-    "MagCheckAnimationMixin"
+
+    "MuzzleDirectionMixin"
   ],
   "minVersion": "0.8.5"
 }

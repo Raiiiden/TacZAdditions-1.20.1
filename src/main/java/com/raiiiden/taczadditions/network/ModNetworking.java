@@ -2,12 +2,11 @@ package com.raiiiden.taczadditions.network;
 
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.core.BlockPos;
-import net.minecraft.world.entity.player.Player;
+import net.minecraft.world.entity.LivingEntity;
+import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
 import net.minecraftforge.network.simple.SimpleChannel;
-import net.minecraftforge.network.NetworkDirection;
 
 import java.util.Optional;
 
@@ -33,9 +32,15 @@ public class ModNetworking {
         );
     }
 
-    public static void sendMuzzleFlash(Player shooter, BlockPos pos, int lightLevel) {
+    /**
+     * Sends a muzzle-flash dynamic-light packet to all players tracking the shooter.
+     * Only called when a client-side dynamic light mod is detected on the server.
+     */
+    public static void sendMuzzleFlash(LivingEntity shooter, int lightLevel) {
         if (!(shooter instanceof ServerPlayer serverPlayer)) return;
-        CHANNEL.send(PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
-                new MuzzleFlashPacket(pos, lightLevel));
+        CHANNEL.send(
+                PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
+                new MuzzleFlashPacket(shooter.getId(), lightLevel)
+        );
     }
 }
