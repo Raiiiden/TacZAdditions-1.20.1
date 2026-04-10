@@ -20,16 +20,8 @@ import net.minecraftforge.fml.common.Mod;
 @Mod.EventBusSubscriber
 public class GunFireEventHandler {
 
-    /**
-     * Detected once at class-load time via Forge's ModList (no reflection needed).
-     *
-     * Priority order:
-     *  1. sodiumdynamiclights — client-side dynamic lights shared via packet; no server blocks.
-     *  2. dynamiclights (Atomicstryker) — server-side entity lighting; registered separately.
-     *  3. Neither — fall back to placing a transient light block via ServerMuzzleFlashManager.
-     */
-    private static final boolean HAS_SODIUM_DL    = ModList.get().isLoaded("sodiumdynamiclights");
-    private static final boolean HAS_ATOMIC_DL    = ModList.get().isLoaded("dynamiclights");
+    private static final boolean HAS_SODIUM_DL = ModList.get().isLoaded("sodiumdynamiclights");
+    private static final boolean HAS_ATOMIC_DL = ModList.get().isLoaded("dynamiclights");
 
     @SubscribeEvent
     public static void onGunFire(GunFireEvent event) {
@@ -42,36 +34,35 @@ public class GunFireEventHandler {
 
         int lightLevel = isSilenced(gun) ? 6 : 15;
 
-        if (HAS_SODIUM_DL) {
-            // Send packet — each nearby client will create its own client-side dynamic light.
-            // GunFireLightManager (Atomicstryker) is intentionally NOT called here; both
-            // approaches would double-apply lighting.
+        boolean useBlockLight = shouldUseBlockLight(gun);
+
+        if (!useBlockLight && HAS_SODIUM_DL) {
             ModNetworking.sendMuzzleFlash(shooter, lightLevel);
-
-        } else if (HAS_ATOMIC_DL) {
-            // GunFireLightManager is registered on the Forge bus only when this mod is
-            // present (see TaczAdditions.commonSetup), so it's safe to call here.
+        } else if (!useBlockLight && HAS_ATOMIC_DL) {
             GunFireLightManager.addLight(shooter, lightLevel);
-
         } else {
-            // No dynamic-light mod — place a transient light block at the muzzle position.
             BlockPos muzzlePos = BlockPos.containing(shooter.getEyePosition());
             ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);
         }
     }
 
+    private static boolean shouldUseBlockLight(ItemStack gun) {
+        if (!TacZAdditionsConfig.SERVER.forceBlockLightForFastGuns.get()) return false;
+        if (!(gun.getItem() instanceof IGun igun)) return false;
+        int rpm = TimelessAPI.getCommonGunIndex(igun.getGunId(gun))
+                .map(index -> index.getGunData().getRoundsPerMinute())
+                .orElse(0);
+        return rpm >= TacZAdditionsConfig.SERVER.fastGunRpmThreshold.get();
+    }
+
     private static boolean isSilenced(ItemStack gun) {
         if (gun.isEmpty() || !(gun.getItem() instanceof IGun igun)) return false;
-
         ResourceLocation gunId = igun.getGunId(gun);
         var gunIndexOpt = TimelessAPI.getCommonGunIndex(gunId);
         if (gunIndexOpt.isEmpty()) return false;
-
         var gunData = gunIndexOpt.get().getGunData();
-
         AttachmentCacheProperty cache = new AttachmentCacheProperty();
         cache.eval(gun, gunData);
-
         Object silenceData = cache.getCache(SilenceModifier.ID);
         return silenceData instanceof Pair<?, ?> pair && pair.right() instanceof Boolean b && b;
     }

@@ -50,7 +50,7 @@ public class LaserDotHandler {
             // TaCZ caches the muzzle position in camera space after all bone animations,
             // so this correctly follows inspect, reload, and sway animations.
             Vec3 barrelDir = getBarrelDirection(mc, partialTick);
-            Vec3 endPos = eyePos.add(barrelDir.scale(100.0));
+            Vec3 endPos = eyePos.add(barrelDir.scale(TacZAdditionsConfig.SERVER.laserDotMaxDistance.get()));
 
             // Check for block hit
             BlockHitResult blockHit = mc.level.clip(new ClipContext(

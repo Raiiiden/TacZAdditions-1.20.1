@@ -25,6 +25,10 @@ public class TacZAdditionsConfig {
 
     public static class Server {
         public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
+        public final ForgeConfigSpec.DoubleValue laserDotMaxDistance;
+
+        public final ForgeConfigSpec.BooleanValue forceBlockLightForFastGuns;
+        public final ForgeConfigSpec.IntValue fastGunRpmThreshold;
         // Category-based vertical recoil
         public final ForgeConfigSpec.DoubleValue recoilPistolVertical;
         public final ForgeConfigSpec.DoubleValue recoilRifleVertical;
@@ -49,6 +53,18 @@ public class TacZAdditionsConfig {
             enableMuzzleFlash = builder
                     .comment("If false, muzzle flash will not be sent to clients.")
                     .define("enableMuzzleFlash", true);
+
+            laserDotMaxDistance = builder
+                    .comment("Maximum ray trace distance for laser dot in blocks.")
+                    .defineInRange("laserDotMaxDistance", 100.0, 1.0, 500.0);
+
+            forceBlockLightForFastGuns = builder
+                    .comment("If true, guns firing above the RPM threshold will use light blocks instead of dynamic lights for more accurate muzzle flash timing.")
+                    .define("forceBlockLightForFastGuns", true);
+
+            fastGunRpmThreshold = builder
+                    .comment("Guns firing at or above this RPM will use light blocks for muzzle flash when forceBlockLightForFastGuns is enabled.")
+                    .defineInRange("fastGunRpmThreshold", 600, 1, 6000);
 
             // Vertical multipliers
             recoilPistolVertical = builder
