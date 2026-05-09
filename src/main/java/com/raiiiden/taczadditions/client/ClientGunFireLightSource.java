@@ -12,6 +12,7 @@ public class ClientGunFireLightSource implements IDynamicLightSource {
     public ClientGunFireLightSource(Entity entity, int lightLevel) {
         this.attachmentEntity = entity;
         this.lightLevel = lightLevel;
+        this.ticksAlive = 0;
     }
 
     public void updateLight(int newLightLevel) {
@@ -26,6 +27,6 @@ public class ClientGunFireLightSource implements IDynamicLightSource {
 
     @Override
     public int getLightLevel() {
-        return ticksAlive >= LIGHT_DURATION_TICKS ? 0 : lightLevel;
+        return ticksAlive < LIGHT_DURATION_TICKS ? lightLevel : 0;
     }
 }

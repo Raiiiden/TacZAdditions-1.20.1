@@ -65,8 +65,10 @@ public class GunMovementMixin {
         float timeFactor = deltaTime * 60f;
         float currentPitch = player.getViewXRot(partialTick);
         float currentYaw = player.getViewYRot(partialTick);
-        float deltaPitch = (currentPitch - lastPitch) * timeFactor;
-        float deltaYaw = (currentYaw - lastYaw) * timeFactor;
+        // Use raw per-frame delta — multiplying by timeFactor squared the deltaTime
+        // dependence and amplified frame-time jitter into visible jagged motion.
+        float deltaPitch = currentPitch - lastPitch;
+        float deltaYaw = currentYaw - lastYaw;
 
         float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTick);
 
@@ -87,19 +89,23 @@ public class GunMovementMixin {
         float rollSens = get("rollSensitivity", DEFAULT_ROLL_SENSITIVITY);
         float maxRoll = get("maxTiltAngle", DEFAULT_MAX_ROLL_AIM + (DEFAULT_MAX_ROLL_HIP - DEFAULT_MAX_ROLL_AIM) * (1.0f - aimingProgress));
 
-        pitchVelocity = pitchVelocity * 0.85f + deltaPitch * drag * hipFirePitchFactor;
-        yawVelocity = yawVelocity * 0.85f + deltaYaw * drag * hipFireFactor;
-        rollVelocity = rollVelocity * 0.85f + (-yawVelocity * 0.2f * hipFireRollFactor);
+        // Velocity decay is per-time-unit (pow with timeFactor), not per-frame, so the
+        // gun no longer "drifts longer" at low FPS. Position accumulation scales by
+        // timeFactor so per-second motion is the same regardless of framerate.
+        float velDecay = (float) Math.pow(0.85f, timeFactor);
+        pitchVelocity = pitchVelocity * velDecay + deltaPitch * drag * hipFirePitchFactor;
+        yawVelocity = yawVelocity * velDecay + deltaYaw * drag * hipFireFactor;
+        rollVelocity = rollVelocity * velDecay + (-yawVelocity * 0.2f * hipFireRollFactor);
 
-        smoothedPitch += pitchVelocity * momentum;
-        smoothedYaw += yawVelocity * momentum;
-        smoothedRoll += rollVelocity * momentum;
+        smoothedPitch += pitchVelocity * momentum * timeFactor;
+        smoothedYaw += yawVelocity * momentum * timeFactor;
+        smoothedRoll += rollVelocity * momentum * timeFactor;
 
         smoothedPitch *= Math.pow(decay, timeFactor);
         smoothedYaw *= Math.pow(decay, timeFactor);
         smoothedRoll *= Math.pow(decay, timeFactor);
 
-        float oscillation = 0.03f * (1.0f - aimingProgress);
+        float oscillation = 0.03f * (1.0f - aimingProgress) * timeFactor;
         smoothedPitch += Math.sin(currentTime * 0.003) * oscillation;
         smoothedYaw += Math.sin(currentTime * 0.002) * oscillation;
 
@@ -145,8 +151,8 @@ public class GunMovementMixin {
             float strafeDrag = get("strafeSmoothing", 0.15f);
 
             // Apply smoothing with separate strafe smoothing factor
-            strafeYawVelocity = strafeYawVelocity * 0.85f + (strafeTargetYaw - smoothedStrafeYaw) * strafeDrag * timeFactor;
-            strafeRollVelocity = strafeRollVelocity * 0.85f + (strafeTargetRoll - smoothedStrafeRoll) * strafeDrag * timeFactor;
+            strafeYawVelocity = strafeYawVelocity * velDecay + (strafeTargetYaw - smoothedStrafeYaw) * strafeDrag * timeFactor;
+            strafeRollVelocity = strafeRollVelocity * velDecay + (strafeTargetRoll - smoothedStrafeRoll) * strafeDrag * timeFactor;
 
             smoothedStrafeYaw += strafeYawVelocity * momentum * timeFactor;
             smoothedStrafeRoll += strafeRollVelocity * momentum * timeFactor;
