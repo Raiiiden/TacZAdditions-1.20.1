@@ -138,7 +138,7 @@ repositories {
 
 dependencies {
     minecraft "net.neoforged:forge:${mc_version}-${neo_version}"
-    implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:6654541")
+    implementation fg.deobf("curse.maven:timeless-and-classics-zero-1028108:8055552")
     implementation 'org.apache.commons:commons-math3:3.6.1'
     implementation fg.deobf("curse.maven:configured-457570:5180900")
     compileOnly fg.deobf("curse.maven:dynamic-lights-227874:4721525")

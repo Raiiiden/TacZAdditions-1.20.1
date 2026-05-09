@@ -293,10 +293,10 @@ public class TacZAdditionsConfig {
 
             dragSmoothing = builder
                     .comment("Drag smoothing factor (lower = more inertia).")
-                    .defineInRange("dragSmoothing", 0.2, 0.0, 1.0);
+                    .defineInRange("dragSmoothing", 0.1, 0.0, 1.0);
             decayFactor = builder
                     .comment("Decay factor for motion smoothing.")
-                    .defineInRange("decayFactor", 0.85, 0.0, 1.0);
+                    .defineInRange("decayFactor", 0.5, 0.0, 1.0);
             momentumFactor = builder
                     .comment("Velocity influence on final position.")
                     .defineInRange("momentumFactor", 0.45, 0.0, 1.0);

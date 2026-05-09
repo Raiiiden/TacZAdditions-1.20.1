@@ -1,7 +1,10 @@
 package com.raiiiden.taczadditions.server;
 
 import atomicstryker.dynamiclights.server.DynamicLights;
+import net.minecraft.core.BlockPos;
 import net.minecraft.world.entity.Entity;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.Block;
 import net.minecraftforge.event.TickEvent;
 import net.minecraftforge.eventbus.api.SubscribeEvent;
 
@@ -20,11 +23,27 @@ public class GunFireLightManager {
 
         if (existingLight != null) {
             existingLight.updateLight(lightLevel);
-        } else {
-            GunFireLightSource newLight = new GunFireLightSource(entity, lightLevel);
-            activeLights.put(entity, newLight);
-            DynamicLights.addLightSource(newLight);
+            return;
         }
+        // Skip if another dynamic light already occupies this entity's block position.
+        // AtomicStryker tracks one lit_air/lit_cave_air/lit_water block per source, and
+        // adding a second source here means our removeLightSource() reverts the shared
+        // block — wiping out a torch/lantern light that would otherwise stay lit.
+        if (hasExistingDynamicLight(entity)) return;
+
+        GunFireLightSource newLight = new GunFireLightSource(entity, lightLevel);
+        activeLights.put(entity, newLight);
+        DynamicLights.addLightSource(newLight);
+    }
+
+    private static boolean hasExistingDynamicLight(Entity entity) {
+        Level level = entity.level();
+        if (level == null) return false;
+        BlockPos pos = entity.blockPosition();
+        Block block = level.getBlockState(pos).getBlock();
+        return block == DynamicLights.LIT_AIR_BLOCK.get()
+                || block == DynamicLights.LIT_CAVE_AIR_BLOCK.get()
+                || block == DynamicLights.LIT_WATER_BLOCK.get();
     }
 
     @SubscribeEvent
