@@ -36,10 +36,8 @@ public class GunFireEventHandler {
 
         boolean useBlockLight = shouldUseBlockLight(gun);
 
-        if (!useBlockLight && HAS_SODIUM_DL) {
+        if (!useBlockLight && (HAS_SODIUM_DL || HAS_ATOMIC_DL)) {
             ModNetworking.sendMuzzleFlash(shooter, lightLevel);
-        } else if (!useBlockLight && HAS_ATOMIC_DL) {
-            GunFireLightManager.addLight(shooter, lightLevel);
         } else {
             BlockPos muzzlePos = BlockPos.containing(shooter.getEyePosition());
             ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);

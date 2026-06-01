@@ -2,7 +2,6 @@ package com.raiiiden.taczadditions;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
-import com.raiiiden.taczadditions.server.GunFireLightManager;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -46,9 +45,7 @@ public class TaczAdditions {
   private void commonSetup(FMLCommonSetupEvent event) {
     event.enqueueWork(ModNetworking::registerPackets);
 
-    // Atomicstryker DL server path: only register the server-tick handler when present.
-    if (ModList.get().isLoaded("dynamiclights")) {
-      MinecraftForge.EVENT_BUS.register(GunFireLightManager.class);
-    }
+    // Muzzle flash dynamic lights are client-side only. The server only sends packets
+    // and uses block lights when dynamic light packets are not available.
   }
 }

@@ -34,7 +34,7 @@ public class ModNetworking {
 
     /**
      * Sends a muzzle-flash dynamic-light packet to all players tracking the shooter.
-     * Only called when a client-side dynamic light mod is detected on the server.
+     * The receiving client decides which dynamic light implementation to use.
      */
     public static void sendMuzzleFlash(LivingEntity shooter, int lightLevel) {
         if (!(shooter instanceof ServerPlayer serverPlayer)) return;
