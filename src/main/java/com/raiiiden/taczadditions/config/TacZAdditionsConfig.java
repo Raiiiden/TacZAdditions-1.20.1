@@ -163,6 +163,8 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue recoilVisualX;
         public final ForgeConfigSpec.DoubleValue recoilVisualY;
         public final ForgeConfigSpec.DoubleValue recoilVisualZ;
+        public final ForgeConfigSpec.DoubleValue recoilKickAngle;
+        public final ForgeConfigSpec.DoubleValue recoilKickPivot;
 
         // Misc
         public final ForgeConfigSpec.DoubleValue dragSmoothing;
@@ -262,6 +264,12 @@ public class TacZAdditionsConfig {
             recoilVisualZ = builder
                     .comment("Visual recoil Z multiplier (kickback)")
                     .defineInRange("visualZ", 5.0, 0.0, 20.0);
+            recoilKickAngle = builder
+                    .comment("Visual recoil kick angle in degrees (rotates barrel upward on fire, 0 = disabled)")
+                    .defineInRange("kickAngle", 1.0, 0.0, 45.0);
+            recoilKickPivot = builder
+                    .comment("Pivot point offset along Z axis for barrel kick rotation (distance from grip)")
+                    .defineInRange("kickPivot", 0.0, 0.0, 2.0);
             builder.pop();
 
             builder.push("scopeSway");

@@ -7,6 +7,7 @@ import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
+import com.tacz.guns.client.resource.GunDisplayInstance;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
@@ -211,5 +212,25 @@ public class GunMovementMixin {
 
     private static float lerp(float alpha, float from, float to) {
         return from + (to - from) * (1.0f - alpha);
+    }
+
+    @Inject(
+            method = "lambda$renderFirstPerson$5",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/tacz/guns/client/event/FirstPersonRenderGunEvent;applyFirstPersonGunTransform(Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/tacz/guns/client/model/BedrockGunModel;F)V",
+                    shift = At.Shift.AFTER
+            ),
+            remap = false
+    )
+    private void applyRecoilKick(ItemStack stack, LocalPlayer player, float partialTick, PoseStack poseStack, ItemDisplayContext ctx, int light, GunDisplayInstance display, CallbackInfo ci) {
+        float kickAngle = TacZAdditionsConfig.CLIENT.recoilKickAngle.get().floatValue();
+        if (kickAngle == 0f) return;
+
+        float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
+        if (recoilProgress <= 0f) return;
+        recoilProgress *= recoilProgress;
+
+        poseStack.mulPose(Axis.XP.rotationDegrees(-kickAngle * recoilProgress));
     }
 }
