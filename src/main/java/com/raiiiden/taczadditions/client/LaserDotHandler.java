@@ -1,6 +1,7 @@
 package com.raiiiden.taczadditions.client;
 
 import com.raiiiden.taczadditions.mixin.MuzzleDirectionMixin;
+import com.raiiiden.taczadditions.network.ModNetworking;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
 import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
@@ -25,6 +26,7 @@ import java.util.function.Predicate;
 
 @Mod.EventBusSubscriber(modid = "taczadditions", value = Dist.CLIENT)
 public class LaserDotHandler {
+    private static long lastSyncedGameTime = -1;
 
     @SubscribeEvent
     public static void onRenderLevel(RenderLevelStageEvent event) {
@@ -86,8 +88,18 @@ public class LaserDotHandler {
                         hitPos.y + normal.y,
                         hitPos.z + normal.z,
                         laserColor, 0, 0); // Color passed here
+
+                syncLaserDot(mc, hitPos.add(normal), laserColor);
             }
         }
+    }
+
+    private static void syncLaserDot(Minecraft mc, Vec3 hitPos, int laserColor) {
+        long gameTime = mc.level.getGameTime();
+        if (gameTime == lastSyncedGameTime) return;
+
+        lastSyncedGameTime = gameTime;
+        ModNetworking.sendLaserDot(hitPos, laserColor);
     }
 
     private static Vec3 getBarrelDirection(Minecraft mc, float partialTick) {

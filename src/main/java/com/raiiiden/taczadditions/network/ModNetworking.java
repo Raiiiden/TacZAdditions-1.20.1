@@ -3,6 +3,7 @@ package com.raiiiden.taczadditions.network;
 import net.minecraft.resources.ResourceLocation;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
+import net.minecraft.world.phys.Vec3;
 import net.minecraftforge.network.NetworkDirection;
 import net.minecraftforge.network.NetworkRegistry;
 import net.minecraftforge.network.PacketDistributor;
@@ -30,6 +31,22 @@ public class ModNetworking {
                 MuzzleFlashPacket::handle,
                 Optional.of(NetworkDirection.PLAY_TO_CLIENT)
         );
+        CHANNEL.registerMessage(
+                id++,
+                LaserDotUpdatePacket.class,
+                LaserDotUpdatePacket::encode,
+                LaserDotUpdatePacket::decode,
+                LaserDotUpdatePacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
+        CHANNEL.registerMessage(
+                id++,
+                LaserDotSyncPacket.class,
+                LaserDotSyncPacket::encode,
+                LaserDotSyncPacket::decode,
+                LaserDotSyncPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
     }
 
     /**
@@ -41,6 +58,17 @@ public class ModNetworking {
         CHANNEL.send(
                 PacketDistributor.TRACKING_ENTITY_AND_SELF.with(() -> serverPlayer),
                 new MuzzleFlashPacket(shooter.getId(), lightLevel)
+        );
+    }
+
+    public static void sendLaserDot(Vec3 hitPos, int color) {
+        CHANNEL.sendToServer(new LaserDotUpdatePacket(hitPos.x, hitPos.y, hitPos.z, color));
+    }
+
+    public static void relayLaserDot(ServerPlayer sender, double x, double y, double z, int color) {
+        CHANNEL.send(
+                PacketDistributor.TRACKING_ENTITY.with(() -> sender),
+                new LaserDotSyncPacket(sender.getId(), x, y, z, color)
         );
     }
 }
