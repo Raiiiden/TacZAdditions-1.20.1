@@ -166,6 +166,12 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue recoilKickAngle;
         public final ForgeConfigSpec.DoubleValue recoilKickPivot;
 
+        // Gun Tuck
+        public final ForgeConfigSpec.BooleanValue enableGunTuck;
+        public final ForgeConfigSpec.DoubleValue gunTuckDistance;
+        public final ForgeConfigSpec.DoubleValue gunTuckMaxAngle;
+        public final ForgeConfigSpec.DoubleValue gunTuckMaxTranslate;
+
         // Misc
         public final ForgeConfigSpec.DoubleValue dragSmoothing;
         public final ForgeConfigSpec.DoubleValue decayFactor;
@@ -270,6 +276,21 @@ public class TacZAdditionsConfig {
             recoilKickPivot = builder
                     .comment("Pivot point offset along Z axis for barrel kick rotation (distance from grip)")
                     .defineInRange("kickPivot", 0.0, 0.0, 2.0);
+            builder.pop();
+
+            builder.push("gunTuck");
+            enableGunTuck = builder
+                    .comment("If true, the gun pitches up when close to a wall.")
+                    .define("enableGunTuck", true);
+            gunTuckDistance = builder
+                    .comment("Distance in blocks at which gun tuck begins.")
+                    .defineInRange("tuckDistance", 1.0, 0.1, 3.0);
+            gunTuckMaxAngle = builder
+                    .comment("Maximum pitch angle when fully tucked (degrees).")
+                    .defineInRange("maxAngle", 60.0, 0.0, 90.0);
+            gunTuckMaxTranslate = builder
+                    .comment("Maximum Z pullback when fully tucked.")
+                    .defineInRange("maxTranslate", 1.0, -5.0, 5.0);
             builder.pop();
 
             builder.push("scopeSway");

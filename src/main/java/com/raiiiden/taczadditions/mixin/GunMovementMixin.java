@@ -3,6 +3,7 @@ package com.raiiiden.taczadditions.mixin;
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
 import com.raiiiden.taczadditions.client.GunRecoilHandler;
+import com.raiiiden.taczadditions.client.GunTuckHandler;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
@@ -181,6 +182,32 @@ public class GunMovementMixin {
             );
         }
 
+        // --- Gun tuck ---
+        if (TacZAdditionsConfig.CLIENT.enableGunTuck.get() && stack.getItem() instanceof AbstractGunItem) {
+            float maxDist = TacZAdditionsConfig.CLIENT.gunTuckDistance.get().floatValue();
+            net.minecraft.world.phys.Vec3 eye = player.getEyePosition(partialTick);
+            net.minecraft.world.phys.Vec3 look = player.getViewVector(partialTick);
+            net.minecraft.world.phys.Vec3 end = eye.add(look.scale(maxDist));
+            net.minecraft.world.level.ClipContext clipCtx = new net.minecraft.world.level.ClipContext(
+                    eye, end,
+                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
+                    net.minecraft.world.level.ClipContext.Fluid.NONE,
+                    player
+            );
+            net.minecraft.world.phys.BlockHitResult hit = player.level().clip(clipCtx);
+            float tuckTarget = 0f;
+            if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
+                double dist = eye.distanceTo(hit.getLocation());
+                tuckTarget = 1.0f - (float)(dist / maxDist);
+                tuckTarget = Math.max(0f, Math.min(1f, tuckTarget));
+            }
+            // Always update — passes 0 on miss so it smoothly returns rather than snapping
+            GunTuckHandler.update(tuckTarget, deltaTime);
+        } else {
+            // Still decay toward 0 when disabled or no gun, prevents snap if toggled
+            GunTuckHandler.update(0f, deltaTime);
+        }
+
         lastPitch = currentPitch;
         lastYaw = currentYaw;
     }
@@ -224,13 +251,27 @@ public class GunMovementMixin {
             remap = false
     )
     private void applyRecoilKick(ItemStack stack, LocalPlayer player, float partialTick, PoseStack poseStack, ItemDisplayContext ctx, int light, GunDisplayInstance display, CallbackInfo ci) {
+        // Recoil kick
         float kickAngle = TacZAdditionsConfig.CLIENT.recoilKickAngle.get().floatValue();
-        if (kickAngle == 0f) return;
+        if (kickAngle > 0f) {
+            float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
+            if (recoilProgress > 0f) {
+                recoilProgress *= recoilProgress;
+                poseStack.mulPose(Axis.XP.rotationDegrees(-kickAngle * recoilProgress));
+            }
+        }
 
-        float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
-        if (recoilProgress <= 0f) return;
-        recoilProgress *= recoilProgress;
+        // Gun tuck
+        if (TacZAdditionsConfig.CLIENT.enableGunTuck.get() && GunTuckHandler.tuckProgress > 0f) {
+            float maxAngle = TacZAdditionsConfig.CLIENT.gunTuckMaxAngle.get().floatValue();
+            float maxTranslate = TacZAdditionsConfig.CLIENT.gunTuckMaxTranslate.get().floatValue();
+            float t = GunTuckHandler.tuckProgress;
 
-        poseStack.mulPose(Axis.XP.rotationDegrees(-kickAngle * recoilProgress));
+            float pivotShift = 0.5f; // shift pivot toward player, tune this
+            poseStack.translate(0f, 0f, -pivotShift);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-maxAngle * t));
+            poseStack.translate(0f, 0f, pivotShift);
+            poseStack.translate(0f, 0f, maxTranslate * t);
+        }
     }
 }
