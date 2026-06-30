@@ -20,8 +20,6 @@ public class TaczAdditions {
   public TaczAdditions() {
     IEventBus modBus = FMLJavaModLoadingContext.get().getModEventBus();
 
-    ModParticles.PARTICLES.register(modBus);
-
     modBus.addListener(this::clientSetup);
     modBus.addListener(this::commonSetup);
     TacZAdditionsConfig.registerConfigs();
