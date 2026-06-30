@@ -52,7 +52,17 @@ public class LaserDotHandler {
     public static void onLevelUnload(LevelEvent.Unload event) {
         if (event.getLevel().isClientSide()) {
             RemoteLaserDots.clear();
+            // Static muzzle-tracking state survives a world unload; reset it so a value poisoned
+            // in one world (e.g. a non-finite muzzle from a transient animation/transform state)
+            // can't permanently kill the dot across a rejoin.
+            resetMuzzleTracking();
         }
+    }
+
+    private static void resetMuzzleTracking() {
+        muzzleBaseline.set(0f, 0f, 0f);
+        muzzleBaselineInit = false;
+        lastMuzzleNanos = 0L;
     }
 
     @SubscribeEvent
@@ -88,6 +98,13 @@ public class LaserDotHandler {
             // crosshair at rest. See getRayOrigin for details.
             Vec3 originPos = getRayOrigin(mc, partialTick, barrelDir);
             Vec3 endPos = originPos.add(barrelDir.scale(TacZAdditionsConfig.SERVER.laserDotMaxDistance.get()));
+
+            // Defensive: never feed a non-finite ray into the clip (would silently miss every frame).
+            if (!isFinite(originPos) || !isFinite(endPos)) {
+                resetMuzzleTracking();
+                buffers.endBatch(LaserDotRenderer.LASER_DOT);
+                return;
+            }
 
             // Check for block hit
             BlockHitResult blockHit = mc.level.clip(new ClipContext(
@@ -175,7 +192,11 @@ public class LaserDotHandler {
         try {
             Vector3f muzzle = GunItemRendererWrapper.muzzleRenderOffset;
             Vector3f fwd = MuzzleCache.muzzleForwardDirection;
-            if ((muzzle.x != 0f || muzzle.y != 0f || muzzle.z != 0f)
+            // A non-finite (NaN/Inf) muzzle or forward would poison muzzleBaseline permanently via
+            // the lerp below, leaving the origin NaN and the dot gone for the rest of the session.
+            // Bail to the eye-anchored fallback (which also resets the tracking state) instead.
+            if (isFinite(muzzle) && isFinite(fwd)
+                    && (muzzle.x != 0f || muzzle.y != 0f || muzzle.z != 0f)
                     && (fwd.x != 0f || fwd.y != 0f || fwd.z != 0f)) {
                 long now = System.nanoTime();
                 double dt = lastMuzzleNanos == 0L ? 0.0 : (now - lastMuzzleNanos) / 1.0e9;
@@ -195,7 +216,7 @@ public class LaserDotHandler {
                 float weight = (float) Math.max(MIN_BASELINE_WEIGHT,
                         Math.min(1.0, 1.0 - angleDeg / NEUTRAL_RESET_ANGLE));
 
-                if (!muzzleBaselineInit) {
+                if (!muzzleBaselineInit || !isFinite(muzzleBaseline)) {
                     muzzleBaseline.set(muzzle);
                     muzzleBaselineInit = true;
                 } else if (dt > 0.0) {
@@ -219,9 +240,16 @@ public class LaserDotHandler {
         } catch (Exception ignored) {}
 
         // No valid muzzle this frame: reset so we don't snap when it comes back.
-        muzzleBaselineInit = false;
-        lastMuzzleNanos = 0L;
+        resetMuzzleTracking();
         return eyePos;
+    }
+
+    private static boolean isFinite(Vector3f v) {
+        return Float.isFinite(v.x) && Float.isFinite(v.y) && Float.isFinite(v.z);
+    }
+
+    private static boolean isFinite(Vec3 v) {
+        return Double.isFinite(v.x) && Double.isFinite(v.y) && Double.isFinite(v.z);
     }
 
     private static int getLaserColor(ItemStack gunStack) {
