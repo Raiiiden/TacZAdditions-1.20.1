@@ -2,13 +2,16 @@ package com.raiiiden.taczadditions;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
+import com.raiiiden.taczadditions.registry.ModSounds;
 import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
 import net.minecraftforge.fml.event.lifecycle.FMLClientSetupEvent;
 import net.minecraftforge.fml.event.lifecycle.FMLCommonSetupEvent;
+import net.minecraftforge.fml.event.config.ModConfigEvent;
 import net.minecraftforge.fml.javafmlmod.FMLJavaModLoadingContext;
+import net.minecraftforge.server.ServerLifecycleHooks;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 
@@ -22,6 +25,8 @@ public class TaczAdditions {
 
     modBus.addListener(this::clientSetup);
     modBus.addListener(this::commonSetup);
+    modBus.addListener(this::onConfigReload);
+    ModSounds.SOUND_EVENTS.register(modBus);
     TacZAdditionsConfig.registerConfigs();
   }
 
@@ -45,5 +50,16 @@ public class TaczAdditions {
 
     // Muzzle flash dynamic lights are client-side only. The server only sends packets
     // and uses block lights when dynamic light packets are not available.
+  }
+
+  private void onConfigReload(ModConfigEvent.Reloading event) {
+    if (event.getConfig().getSpec() != TacZAdditionsConfig.SERVER_SPEC) return;
+
+    var server = ServerLifecycleHooks.getCurrentServer();
+    if (server == null) return;
+
+    for (var player : server.getPlayerList().getPlayers()) {
+      ModNetworking.sendLaserToggleConfig(player);
+    }
   }
 }

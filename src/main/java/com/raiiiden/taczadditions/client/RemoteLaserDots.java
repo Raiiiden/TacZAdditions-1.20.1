@@ -17,9 +17,9 @@ public final class RemoteLaserDots {
      // one-and-a-half network ticks
     private static final double SMOOTHING_TAU = 0.035;
 
-    // Grace period after the last packet before a dot starts fading (covers brief packet hitches). */
+    // Grace period after the last packet before a dot starts fading, covering brief packet hitches.
     private static final long FADE_START_MS = 200L;
-    // Time after the last packet at which a dot is fully gone and removed. */
+    // Time after the last packet at which a dot is fully gone and removed.
     private static final long EXPIRE_MS = 350L;
 
     private static final float HALF_SIZE = 0.08F;
@@ -52,6 +52,19 @@ public final class RemoteLaserDots {
             dot.renderZ = z;
             dot.initialized = true;
         }
+    }
+
+    // Returns whether this entity currently has a fresh, network-synchronized dot. This avoids
+    // also rendering the approximate entity-rotation fallback intended for NPCs.
+    public static boolean hasActiveDot(int entityId) {
+        Dot dot = DOTS.get(entityId);
+        if (dot == null) return false;
+
+        if (System.currentTimeMillis() - dot.lastUpdateMs > EXPIRE_MS) {
+            DOTS.remove(entityId, dot);
+            return false;
+        }
+        return true;
     }
 
     // Drops all tracked dots (e.g. on world unload).

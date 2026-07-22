@@ -185,22 +185,7 @@ public class GunMovementMixin {
         // --- Gun tuck ---
         if (TacZAdditionsConfig.CLIENT.enableGunTuck.get() && stack.getItem() instanceof AbstractGunItem) {
             float maxDist = TacZAdditionsConfig.CLIENT.gunTuckDistance.get().floatValue();
-            net.minecraft.world.phys.Vec3 eye = player.getEyePosition(partialTick);
-            net.minecraft.world.phys.Vec3 look = player.getViewVector(partialTick);
-            net.minecraft.world.phys.Vec3 end = eye.add(look.scale(maxDist));
-            net.minecraft.world.level.ClipContext clipCtx = new net.minecraft.world.level.ClipContext(
-                    eye, end,
-                    net.minecraft.world.level.ClipContext.Block.COLLIDER,
-                    net.minecraft.world.level.ClipContext.Fluid.NONE,
-                    player
-            );
-            net.minecraft.world.phys.BlockHitResult hit = player.level().clip(clipCtx);
-            float tuckTarget = 0f;
-            if (hit.getType() != net.minecraft.world.phys.HitResult.Type.MISS) {
-                double dist = eye.distanceTo(hit.getLocation());
-                tuckTarget = 1.0f - (float)(dist / maxDist);
-                tuckTarget = Math.max(0f, Math.min(1f, tuckTarget));
-            }
+            float tuckTarget = GunTuckHandler.calculateTarget(player, partialTick, maxDist);
             // Always update — passes 0 on miss so it smoothly returns rather than snapping
             GunTuckHandler.update(tuckTarget, deltaTime);
         } else {

@@ -21,7 +21,7 @@ public final class LaserDotRenderer extends RenderType {
     private static final ResourceLocation TEXTURE =
             new ResourceLocation("taczadditions", "textures/particle/laser_dot.png");
 
-    /** Brightness multiplier applied to the laser colour (matches the old particle look). */
+    // Brightness multiplier applied to the laser colour, matching the old particle look.
     private static final float BRIGHTNESS = 1.8F;
 
     public static final RenderType LASER_DOT = RenderType.create(

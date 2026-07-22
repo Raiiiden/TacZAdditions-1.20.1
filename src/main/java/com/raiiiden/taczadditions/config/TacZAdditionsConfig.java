@@ -26,6 +26,7 @@ public class TacZAdditionsConfig {
     public static class Server {
         public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
         public final ForgeConfigSpec.DoubleValue laserDotMaxDistance;
+        public final ForgeConfigSpec.BooleanValue enableLaserToggle;
 
         public final ForgeConfigSpec.BooleanValue forceBlockLightForFastGuns;
         public final ForgeConfigSpec.IntValue fastGunRpmThreshold;
@@ -57,6 +58,10 @@ public class TacZAdditionsConfig {
             laserDotMaxDistance = builder
                     .comment("Maximum ray trace distance for laser dot in blocks.")
                     .defineInRange("laserDotMaxDistance", 100.0, 1.0, 500.0);
+
+            enableLaserToggle = builder
+                    .comment("Allow players to toggle equipped laser attachments with a keybind. If false, lasers are always on.")
+                    .define("enableLaserToggle", true);
 
             forceBlockLightForFastGuns = builder
                     .comment("If true, guns firing above the RPM threshold will use light blocks instead of dynamic lights for more accurate muzzle flash timing.")

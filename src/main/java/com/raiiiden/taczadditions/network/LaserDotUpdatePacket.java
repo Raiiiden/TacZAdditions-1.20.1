@@ -1,11 +1,9 @@
 package com.raiiiden.taczadditions.network;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
-import com.tacz.guns.api.item.IGun;
-import com.tacz.guns.api.item.attachment.AttachmentType;
+import com.raiiiden.taczadditions.util.LaserToggleData;
 import net.minecraft.network.FriendlyByteBuf;
 import net.minecraft.server.level.ServerPlayer;
-import net.minecraft.world.item.ItemStack;
 import net.minecraftforge.network.NetworkEvent;
 
 import java.util.function.Supplier;
@@ -55,19 +53,16 @@ public class LaserDotUpdatePacket {
             return false;
         }
 
-        if (!isHoldingGunWithLaser(sender.getMainHandItem())) {
+        if (!LaserToggleData.hasLaser(sender.getMainHandItem())) {
+            return false;
+        }
+
+        if (TacZAdditionsConfig.SERVER.enableLaserToggle.get()
+                && !LaserToggleData.isEnabled(sender.getMainHandItem())) {
             return false;
         }
 
         double maxDistance = TacZAdditionsConfig.SERVER.laserDotMaxDistance.get() + 2.0;
         return sender.distanceToSqr(msg.x, msg.y, msg.z) <= maxDistance * maxDistance;
-    }
-
-    private static boolean isHoldingGunWithLaser(ItemStack gunStack) {
-        if (gunStack.getItem() instanceof IGun gun) {
-            ItemStack laserAttachment = gun.getAttachment(gunStack, AttachmentType.LASER);
-            return !laserAttachment.isEmpty();
-        }
-        return false;
     }
 }

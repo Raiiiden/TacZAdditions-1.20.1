@@ -4,6 +4,7 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.model.bedrock.BedrockPart;
 import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
+import com.raiiiden.taczadditions.client.LaserVisibilityCache;
 import com.raiiiden.taczadditions.client.MuzzleCache;
 import org.joml.Matrix4f;
 import org.spongepowered.asm.mixin.Mixin;
@@ -20,6 +21,10 @@ public class MuzzleDirectionMixin {
             remap = false
     )
     private static void captureMuzzleForward(PoseStack poseStack, BedrockGunModel gunModel, CallbackInfo ci) {
+        // This runs immediately after the first-person model was rendered, while animation-driven
+        // bone visibility still represents this gun and this frame.
+        LaserVisibilityCache.captureLocal(gunModel);
+
         if (gunModel.getMuzzleFlashPosPath() == null) {
             MuzzleCache.muzzleForwardDirection.set(0, 0, 0);
             return;

@@ -26,11 +26,8 @@ public class NoRecoilRecoveryMixin {
     @Shadow(remap = false)
     private static double yRotO;
 
-    /**
-     * This mixin applies the recoil delta from the gun's spline function.
-     * If recoil recovery is disabled via config (enableRecoilRecovery = false),
-     * then negative deltas (which would normally recover the view) are ignored.
-     */
+    // This mixin applies the recoil delta from the gun's spline function.
+    // If recoil recovery is disabled, negative deltas that recover the view are ignored.
     @Inject(method = "applyCameraRecoil", at = @At("HEAD"), cancellable = true, remap = false)
     private static void applyCustomRecoil(ViewportEvent.ComputeCameraAngles event, CallbackInfo ci) {
         boolean recoilRecoveryEnabled = TacZAdditionsConfig.CLIENT.enableRecoilRecovery.get();
