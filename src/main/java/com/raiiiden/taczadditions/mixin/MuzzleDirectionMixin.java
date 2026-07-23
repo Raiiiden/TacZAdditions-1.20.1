@@ -26,7 +26,7 @@ public class MuzzleDirectionMixin {
         LaserVisibilityCache.captureLocal(gunModel);
 
         if (gunModel.getMuzzleFlashPosPath() == null) {
-            MuzzleCache.muzzleForwardDirection.set(0, 0, 0);
+            MuzzleCache.clear();
             return;
         }
 

@@ -62,6 +62,32 @@ public final class LaserDotRenderer extends RenderType {
         Vector3f right = new Vector3f(1.0F, 0.0F, 0.0F).rotate(rotation);
         Vector3f up = new Vector3f(0.0F, 1.0F, 0.0F).rotate(rotation);
 
+        renderQuad(pose, buffers, rx, ry, rz, right, up, color, alpha, halfSize);
+    }
+
+    public static void renderSurfaceDot(PoseStack pose, MultiBufferSource buffers, Camera camera,
+                                        double worldX, double worldY, double worldZ, Vec3 surfaceNormal,
+                                        int color, float alpha, float halfSize) {
+        Vec3 cam = camera.getPosition();
+        float rx = (float) (worldX - cam.x);
+        float ry = (float) (worldY - cam.y);
+        float rz = (float) (worldZ - cam.z);
+
+        Vector3f normal = new Vector3f((float) surfaceNormal.x, (float) surfaceNormal.y,
+                (float) surfaceNormal.z).normalize();
+        Vector3f reference = Math.abs(normal.y) > 0.99F
+                ? new Vector3f(1.0F, 0.0F, 0.0F)
+                : new Vector3f(0.0F, 1.0F, 0.0F);
+        Vector3f right = reference.cross(normal, new Vector3f()).normalize();
+        Vector3f up = normal.cross(right, new Vector3f()).normalize();
+
+        renderQuad(pose, buffers, rx, ry, rz, right, up, color, alpha, halfSize);
+    }
+
+    private static void renderQuad(PoseStack pose, MultiBufferSource buffers,
+                                   float rx, float ry, float rz, Vector3f right, Vector3f up,
+                                   int color, float alpha, float halfSize) {
+
         int r = Math.min((int) ((color >> 16 & 0xFF) * BRIGHTNESS), 255);
         int g = Math.min((int) ((color >> 8 & 0xFF) * BRIGHTNESS), 255);
         int b = Math.min((int) ((color & 0xFF) * BRIGHTNESS), 255);

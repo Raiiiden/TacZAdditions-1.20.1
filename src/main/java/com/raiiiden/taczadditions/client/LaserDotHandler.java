@@ -5,7 +5,6 @@ import com.tacz.guns.api.TimelessAPI;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.api.item.attachment.AttachmentType;
-import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
 import com.tacz.guns.util.LaserColorUtil;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.mojang.blaze3d.vertex.PoseStack;
@@ -30,6 +29,7 @@ import java.util.function.Predicate;
 
 @Mod.EventBusSubscriber(modid = "taczadditions", value = Dist.CLIENT)
 public class LaserDotHandler {
+    private static final double BLOCK_SURFACE_OFFSET = 0.002;
     private static long lastSyncedGameTime = -1;
 
     @SubscribeEvent
@@ -37,7 +37,7 @@ public class LaserDotHandler {
         if (event.getLevel().isClientSide()) {
             RemoteLaserDots.clear();
             LaserVisibilityCache.clear();
-            LaserAttachmentTransformCache.clear();
+            MuzzleCache.clear();
         }
     }
 
@@ -84,55 +84,19 @@ public class LaserDotHandler {
             // Use the gun's actual barrel direction instead of the crosshair look vector.
             // TaCZ caches the muzzle position in camera space after all bone animations,
             // so this correctly follows inspect, reload, and sway animations.
-            Vec3 barrelDir = getBarrelDirection(mc, partialTick);
-
             Vec3 eyePos = mc.player.getEyePosition(partialTick);
-            // Normally the eye remains the collision origin so the laser agrees with the weapon's
-            // point of impact. Inspect and sprint deliberately move the gun away from that firing
-            // pose, so those states use the rendered laser attachment bone for the whole ray.
-            Vec3 rayOrigin = eyePos;
-            if (shouldFollowAttachmentOnly(mc, gunStack, partialTick)) {
-                LaserRay attachmentRay = getLaserAttachmentRay(mc, gunStack);
-                if (attachmentRay != null) {
-                    rayOrigin = attachmentRay.origin();
-                    barrelDir = attachmentRay.direction();
-                }
+            boolean correctAnimatedAngle = shouldUseAnimatedGunAngle(mc, gunStack, partialTick);
+            Vec3 barrelDir = getBarrelDirection(mc, partialTick, correctAnimatedAngle);
+            if (!isFinite(barrelDir)) {
+                barrelDir = mc.player.getViewVector(partialTick);
             }
-            Vec3 endPos = rayOrigin.add(barrelDir.scale(TacZAdditionsConfig.SERVER.laserDotMaxDistance.get()));
+            double maxDistance = TacZAdditionsConfig.SERVER.laserDotMaxDistance.get();
+            Vec3 endPos = eyePos.add(barrelDir.scale(maxDistance));
+            LaserHit hit = findHitPosition(mc.player, eyePos, endPos);
 
-            // Check for block hit
-            BlockHitResult blockHit = mc.level.clip(new ClipContext(
-                    rayOrigin,
-                    endPos,
-                    ClipContext.Block.COLLIDER,
-                    ClipContext.Fluid.NONE,
-                    mc.player
-            ));
-
-            // Check for entity hit
-            EntityHitResult entityHit = rayTraceEntities(mc.player, rayOrigin, endPos,
-                    entity -> !entity.isSpectator() && entity.isPickable());
-
-            // Determine which is closer
-            Vec3 hitPos = null;
-            if (entityHit != null && blockHit.getType() != HitResult.Type.MISS) {
-                double entityDist = rayOrigin.distanceToSqr(entityHit.getLocation());
-                double blockDist = rayOrigin.distanceToSqr(blockHit.getLocation());
-                hitPos = entityDist < blockDist ? entityHit.getLocation() : blockHit.getLocation();
-            } else if (entityHit != null) {
-                hitPos = entityHit.getLocation();
-            } else if (blockHit.getType() != HitResult.Type.MISS) {
-                hitPos = blockHit.getLocation();
-            }
-
-            // Render the dot directly this frame. Because it is recomputed and redrawn from the same
-            // partial tick, it tracks the muzzle with zero latency regardless of framerate.
-            if (hitPos != null) {
-                // Nudge slightly toward the shooter so the dot sits just in front of the surface
-                // (avoids z-fighting while still being occluded by anything in between).
-                Vec3 dotPos = hitPos.add(barrelDir.scale(-0.01));
-                LaserDotRenderer.renderDot(poseStack, buffers, camera,
-                        dotPos.x, dotPos.y, dotPos.z, laserColor, 1.0F, 0.08F);
+            // Render the dot directly from the eye-origin ray resolved for this frame.
+            if (hit != null) {
+                Vec3 dotPos = renderHit(poseStack, buffers, camera, hit, barrelDir, laserColor);
 
                 syncLaserDot(mc, dotPos, laserColor);
             }
@@ -160,60 +124,43 @@ public class LaserDotHandler {
         ModNetworking.sendLaserDot(hitPos, laserColor);
     }
 
-    private static Vec3 getBarrelDirection(Minecraft mc, float partialTick) {
-        try {
-            Vector3f muzzle = GunItemRendererWrapper.muzzleRenderOffset;
-            if (muzzle != null && (muzzle.x != 0f || muzzle.y != 0f || muzzle.z != 0f)) {
-                Vector3f fwd = MuzzleCache.muzzleForwardDirection;
-
-                if (fwd.x != 0f || fwd.y != 0f || fwd.z != 0f) {
-                    Camera camera = mc.gameRenderer.getMainCamera();
-                    org.joml.Vector3f left = camera.getLeftVector();
-                    org.joml.Vector3f up   = camera.getUpVector();
-                    org.joml.Vector3f look = camera.getLookVector();
-
-                    double wx = -left.x * fwd.x + up.x * fwd.y - look.x * fwd.z;
-                    double wy = -left.y * fwd.x + up.y * fwd.y - look.y * fwd.z;
-                    double wz = -left.z * fwd.x + up.z * fwd.y - look.z * fwd.z;
-
-                    double len = Math.sqrt(wx * wx + wy * wy + wz * wz);
-                    if (len > 1e-6) {
-                        return new Vec3(-wx / len, -wy / len, -wz / len);
-                    }
-                }
-            }
-        } catch (Exception ignored) {}
-
-        return mc.player.getViewVector(partialTick);
-    }
-
-    private static LaserRay getLaserAttachmentRay(Minecraft mc, ItemStack gunStack) {
-        if (!LaserAttachmentTransformCache.isValidFor(gunStack)) return null;
-
-        Vector3f position = LaserAttachmentTransformCache.position;
-        Vector3f forward = LaserAttachmentTransformCache.forwardDirection;
-        if (forward.x == 0f && forward.y == 0f && forward.z == 0f) return null;
+    private static Vec3 getBarrelDirection(Minecraft mc, float partialTick,
+                                           boolean correctItemFov) {
+        Vector3f forward = MuzzleCache.muzzleForwardDirection;
+        if (!isFinite(forward)
+                || forward.x == 0.0F && forward.y == 0.0F && forward.z == 0.0F) {
+            return mc.player.getViewVector(partialTick);
+        }
 
         Camera camera = mc.gameRenderer.getMainCamera();
         org.joml.Vector3f left = camera.getLeftVector();
         org.joml.Vector3f up = camera.getUpVector();
         org.joml.Vector3f look = camera.getLookVector();
+        double forwardZ = forward.z * (correctItemFov ? getItemToWorldProjectionScale() : 1.0);
 
-        Vec3 origin = camera.getPosition().add(
-                -left.x * position.x + up.x * position.y - look.x * position.z,
-                -left.y * position.x + up.y * position.y - look.y * position.z,
-                -left.z * position.x + up.z * position.y - look.z * position.z
-        );
-
-        double dx = left.x * forward.x - up.x * forward.y + look.x * forward.z;
-        double dy = left.y * forward.x - up.y * forward.y + look.y * forward.z;
-        double dz = left.z * forward.x - up.z * forward.y + look.z * forward.z;
-        Vec3 direction = new Vec3(dx, dy, dz);
-        if (direction.lengthSqr() < 1.0e-12) return null;
-        return new LaserRay(origin, direction.normalize());
+        // The model's beam points down local -Z. Transform that rotated axis into world space.
+        double wx = left.x * forward.x - up.x * forward.y + look.x * forwardZ;
+        double wy = left.y * forward.x - up.y * forward.y + look.y * forwardZ;
+        double wz = left.z * forward.x - up.z * forward.y + look.z * forwardZ;
+        double length = Math.sqrt(wx * wx + wy * wy + wz * wz);
+        return length > 1.0e-6
+                ? new Vec3(wx / length, wy / length, wz / length)
+                : mc.player.getViewVector(partialTick);
     }
 
-    private static boolean shouldFollowAttachmentOnly(Minecraft mc, ItemStack gunStack, float partialTick) {
+    private static double getItemToWorldProjectionScale() {
+        try {
+            double itemFov = com.tacz.guns.client.event.CameraSetupEvent.ITEM_MODEL_FOV_DYNAMICS.get();
+            double worldFov = com.tacz.guns.client.event.CameraSetupEvent.WORLD_FOV_DYNAMICS.get();
+            return Math.tan(Math.toRadians(itemFov / 2.0))
+                    / Math.tan(Math.toRadians(worldFov / 2.0));
+        } catch (Exception ignored) {
+            return 1.0;
+        }
+    }
+
+    private static boolean shouldUseAnimatedGunAngle(Minecraft mc, ItemStack gunStack,
+                                                     float partialTick) {
         if (!mc.options.getCameraType().isFirstPerson()) return false;
         if (mc.player.isSprinting()) return true;
 
@@ -224,14 +171,21 @@ public class LaserDotHandler {
                 return false;
             }
 
-            // Scoped aiming can also hide the crosshair; that should retain normal eye-origin aim.
             float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(mc.player)
                     .getClientAimingProgress(partialTick);
             return aimingProgress <= 1.0e-3F;
         }).orElse(false);
     }
 
-    private record LaserRay(Vec3 origin, Vec3 direction) {}
+    private static boolean isFinite(Vector3f vector) {
+        return vector != null && Float.isFinite(vector.x) && Float.isFinite(vector.y)
+                && Float.isFinite(vector.z);
+    }
+
+    private static boolean isFinite(Vec3 vector) {
+        return vector != null && Double.isFinite(vector.x) && Double.isFinite(vector.y)
+                && Double.isFinite(vector.z);
+    }
 
     private static void renderEntityLaserDots(Minecraft mc, PoseStack poseStack,
                                                MultiBufferSource buffers, Camera camera,
@@ -260,35 +214,124 @@ public class LaserDotHandler {
 
             Vec3 eyePos = shooter.getEyePosition(partialTick);
             Vec3 endPos = eyePos.add(direction.scale(maxDistance));
-            Vec3 hitPos = findHitPosition(shooter, eyePos, endPos);
-            if (hitPos == null) continue;
+            LaserHit hit = findHitPosition(shooter, eyePos, endPos);
+            if (hit == null) continue;
 
-            Vec3 dotPos = hitPos.add(direction.scale(-0.01));
-            LaserDotRenderer.renderDot(poseStack, buffers, camera,
-                    dotPos.x, dotPos.y, dotPos.z, getLaserColor(gunStack), 1.0F, 0.08F);
+            renderHit(poseStack, buffers, camera, hit, direction, getLaserColor(gunStack));
         }
     }
 
-    private static Vec3 findHitPosition(Entity shooter, Vec3 start, Vec3 end) {
-        BlockHitResult blockHit = shooter.level().clip(new ClipContext(
-                start,
-                end,
-                ClipContext.Block.COLLIDER,
-                ClipContext.Fluid.NONE,
-                shooter
-        ));
+    private static LaserHit findHitPosition(Entity shooter, Vec3 start, Vec3 end) {
+        BlockHitResult blockHit = clipBlocks(shooter, start, end);
+        if (blockHit.getType() != HitResult.Type.MISS && blockHit.isInside()) {
+            blockHit = resolveInsideBlockHit(shooter, start, end, blockHit);
+            // A ray that begins inside solid geometry must not continue through that geometry.
+            if (blockHit == null) return null;
+        }
 
-        EntityHitResult entityHit = rayTraceEntities(shooter, start, end,
+        EntityRayHit entityHit = rayTraceEntities(shooter, start, end,
                 entity -> !entity.isSpectator() && entity.isPickable());
 
         if (entityHit != null && blockHit.getType() != HitResult.Type.MISS) {
-            double entityDist = start.distanceToSqr(entityHit.getLocation());
             double blockDist = start.distanceToSqr(blockHit.getLocation());
-            return entityDist < blockDist ? entityHit.getLocation() : blockHit.getLocation();
+            return entityHit.distanceSqr() < blockDist
+                    ? LaserHit.fromEntity(entityHit.result())
+                    : LaserHit.fromBlock(blockHit);
         }
-        if (entityHit != null) return entityHit.getLocation();
-        if (blockHit.getType() != HitResult.Type.MISS) return blockHit.getLocation();
+        if (entityHit != null) return LaserHit.fromEntity(entityHit.result());
+        if (blockHit.getType() != HitResult.Type.MISS) return LaserHit.fromBlock(blockHit);
         return null;
+    }
+
+    private static BlockHitResult clipBlocks(Entity shooter, Vec3 start, Vec3 end) {
+        // OUTLINE matches visible block geometry, preventing the laser from passing through visible
+        // blocks that intentionally have no collision shape, such as signs and decorative blocks.
+        return shooter.level().clip(new ClipContext(
+                start,
+                end,
+                ClipContext.Block.OUTLINE,
+                ClipContext.Fluid.NONE,
+                shooter
+        ));
+    }
+
+    private static BlockHitResult resolveInsideBlockHit(Entity shooter, Vec3 start, Vec3 end,
+                                                        BlockHitResult insideHit) {
+        Vec3 ray = end.subtract(start);
+        if (ray.lengthSqr() < 1.0e-12) return null;
+
+        // Minecraft reports an inside hit 0.1% along the entire ray. At a 100-block range that
+        // places the result 0.1 blocks into the wall. Reverse-trace to recover the entry surface.
+        BlockHitResult reverseHit = clipBlocks(shooter, start.subtract(ray), start);
+        if (reverseHit.getType() == HitResult.Type.MISS
+                || reverseHit.isInside()
+                || !reverseHit.getBlockPos().equals(insideHit.getBlockPos())) {
+            return null;
+        }
+        return reverseHit;
+    }
+
+    private static Vec3 renderHit(PoseStack poseStack, MultiBufferSource buffers, Camera camera,
+                                  LaserHit hit, Vec3 rayDirection, int color) {
+        if (hit.surfaceNormal() != null) {
+            Vec3 dotPos = hit.location().add(hit.surfaceNormal().scale(BLOCK_SURFACE_OFFSET));
+            LaserDotRenderer.renderSurfaceDot(poseStack, buffers, camera,
+                    dotPos.x, dotPos.y, dotPos.z, hit.surfaceNormal(), color, 1.0F, 0.08F);
+            return dotPos;
+        }
+
+        Vec3 dotPos = hit.location().add(rayDirection.scale(-0.01));
+        LaserDotRenderer.renderDot(poseStack, buffers, camera,
+                dotPos.x, dotPos.y, dotPos.z, color, 1.0F, 0.08F);
+        return dotPos;
+    }
+
+    private record LaserHit(Vec3 location, Vec3 surfaceNormal) {
+        private static LaserHit fromBlock(BlockHitResult hit) {
+            return new LaserHit(hit.getLocation(), Vec3.atLowerCornerOf(hit.getDirection().getNormal()));
+        }
+
+        private static LaserHit fromEntity(EntityHitResult hit) {
+            return new LaserHit(hit.getLocation(), null);
+        }
+    }
+
+    private record EntityRayHit(EntityHitResult result, double distanceSqr) {}
+
+    private static EntityRayHit rayTraceEntities(Entity shooter, Vec3 start, Vec3 end,
+                                                  Predicate<Entity> filter) {
+        Vec3 ray = end.subtract(start);
+        AABB searchBox = shooter.getBoundingBox().expandTowards(ray).inflate(1.0);
+        EntityRayHit closest = null;
+        double closestDist = Double.MAX_VALUE;
+
+        for (Entity entity : shooter.level().getEntities(shooter, searchBox, filter)) {
+            if (entity.getRootVehicle() == shooter.getRootVehicle() && !entity.canRiderInteract()) continue;
+
+            AABB entityBox = entity.getBoundingBox().inflate(entity.getPickRadius());
+            Vec3 hitVec;
+            double distance;
+
+            if (entityBox.contains(start)) {
+                // Treat an origin inside an entity as an immediate hit, but recover the entry
+                // boundary so the rendered dot does not sit inside the entity's bounding box.
+                Vec3 reverseRay = ray.normalize().scale(Math.max(ray.length(), 16.0));
+                hitVec = entityBox.clip(start.subtract(reverseRay), start).orElse(start);
+                distance = 0.0;
+            } else {
+                Optional<Vec3> hitOpt = entityBox.clip(start, end);
+                if (hitOpt.isEmpty()) continue;
+                hitVec = hitOpt.get();
+                distance = start.distanceToSqr(hitVec);
+            }
+
+            if (distance < closestDist) {
+                closestDist = distance;
+                closest = new EntityRayHit(new EntityHitResult(entity, hitVec), distance);
+            }
+        }
+
+        return closest;
     }
 
     private static int getLaserColor(ItemStack gunStack) {
@@ -308,30 +351,6 @@ public class LaserDotHandler {
             }
         }
         return 0xFF0000; // Default red if something goes wrong
-    }
-
-    private static EntityHitResult rayTraceEntities(Entity shooter, Vec3 start, Vec3 end, Predicate<Entity> filter) {
-        Vec3 vec = end.subtract(start);
-        AABB searchBox = shooter.getBoundingBox().expandTowards(vec).inflate(1.0);
-
-        EntityHitResult closest = null;
-        double closestDist = Double.MAX_VALUE;
-
-        for (Entity entity : shooter.level().getEntities(shooter, searchBox, filter)) {
-            AABB entityBox = entity.getBoundingBox().inflate(0.0);
-            Optional<Vec3> hitOpt = entityBox.clip(start, end);
-
-            if (hitOpt.isPresent()) {
-                Vec3 hitVec = hitOpt.get();
-                double dist = start.distanceToSqr(hitVec);
-                if (dist < closestDist) {
-                    closestDist = dist;
-                    closest = new EntityHitResult(entity, hitVec);
-                }
-            }
-        }
-
-        return closest;
     }
 
     private static boolean isHoldingGunWithLaser(ItemStack gunStack) {

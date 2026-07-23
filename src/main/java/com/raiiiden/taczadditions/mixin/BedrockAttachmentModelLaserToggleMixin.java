@@ -15,12 +15,15 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Mixin(value = BedrockAttachmentModel.class, remap = false)
 public class BedrockAttachmentModelLaserToggleMixin {
     @Unique
-    private BedrockPart taczadditions$hiddenLaserRoot;
+    private List<BedrockPart> taczadditions$hiddenLaserParts;
     @Unique
-    private boolean taczadditions$savedLaserVisibility;
+    private List<Boolean> taczadditions$savedLaserVisibility;
 
     @Inject(method = "render", at = @At("HEAD"))
     private void hideDisabledAttachmentLaser(ItemStack attachmentStack, ItemStack gunStack,
@@ -29,15 +32,16 @@ public class BedrockAttachmentModelLaserToggleMixin {
                                              CallbackInfo ci) {
         ItemStack safeGunStack = gunStack == null ? ItemStack.EMPTY : gunStack;
         ClientLaserToggleState.beginAttachmentRender(safeGunStack);
-        taczadditions$hiddenLaserRoot = null;
+        taczadditions$hiddenLaserParts = null;
+        taczadditions$savedLaserVisibility = null;
         if (!taczadditions$isEquippedLaser(attachmentStack, safeGunStack)) return;
 
-        BedrockPart root = ((BedrockAttachmentModel) (Object) this).getRootNode();
         if (ClientLaserToggleState.isLaserEnabled(safeGunStack)) return;
+        BedrockPart root = ((BedrockAttachmentModel) (Object) this).getRootNode();
         if (root != null) {
-            taczadditions$hiddenLaserRoot = root;
-            taczadditions$savedLaserVisibility = root.visible;
-            root.visible = false;
+            taczadditions$hiddenLaserParts = new ArrayList<>();
+            taczadditions$savedLaserVisibility = new ArrayList<>();
+            taczadditions$hideLaserIndicators(root);
         }
     }
 
@@ -46,11 +50,31 @@ public class BedrockAttachmentModelLaserToggleMixin {
                                         PoseStack poseStack, ItemDisplayContext context,
                                         RenderType renderType, int light, int overlay,
                                         CallbackInfo ci) {
-        if (taczadditions$hiddenLaserRoot != null) {
-            taczadditions$hiddenLaserRoot.visible = taczadditions$savedLaserVisibility;
-            taczadditions$hiddenLaserRoot = null;
+        if (taczadditions$hiddenLaserParts != null && taczadditions$savedLaserVisibility != null) {
+            for (int i = 0; i < taczadditions$hiddenLaserParts.size(); i++) {
+                taczadditions$hiddenLaserParts.get(i).visible =
+                        taczadditions$savedLaserVisibility.get(i);
+            }
         }
+        taczadditions$hiddenLaserParts = null;
+        taczadditions$savedLaserVisibility = null;
         ClientLaserToggleState.endAttachmentRender();
+    }
+
+    @Unique
+    private void taczadditions$hideLaserIndicators(BedrockPart part) {
+        String name = part.name;
+        if ("laser_beam".equalsIgnoreCase(name)
+                || "laser_illuminated".equalsIgnoreCase(name)
+                || "light_illuminated".equalsIgnoreCase(name)) {
+            taczadditions$hiddenLaserParts.add(part);
+            taczadditions$savedLaserVisibility.add(part.visible);
+            part.visible = false;
+        }
+
+        for (BedrockPart child : part.children) {
+            taczadditions$hideLaserIndicators(child);
+        }
     }
 
     @Unique

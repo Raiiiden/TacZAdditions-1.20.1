@@ -8,7 +8,6 @@
     "ClientMessageRefitGunLaserToggleMixin"
   ],
   "client": [
-    "AttachmentRenderLaserTransformMixin",
     "BeamRendererMixin",
     "BedrockAttachmentModelLaserToggleMixin",
     "BedrockGunModelAccessor",
