@@ -27,12 +27,13 @@ public class BedrockAttachmentModelLaserToggleMixin {
                                              PoseStack poseStack, ItemDisplayContext context,
                                              RenderType renderType, int light, int overlay,
                                              CallbackInfo ci) {
-        ClientLaserToggleState.beginAttachmentRender(gunStack);
+        ItemStack safeGunStack = gunStack == null ? ItemStack.EMPTY : gunStack;
+        ClientLaserToggleState.beginAttachmentRender(safeGunStack);
         taczadditions$hiddenLaserRoot = null;
-        if (!taczadditions$isEquippedLaser(attachmentStack, gunStack)) return;
+        if (!taczadditions$isEquippedLaser(attachmentStack, safeGunStack)) return;
 
         BedrockPart root = ((BedrockAttachmentModel) (Object) this).getRootNode();
-        if (ClientLaserToggleState.isLaserEnabled(gunStack)) return;
+        if (ClientLaserToggleState.isLaserEnabled(safeGunStack)) return;
         if (root != null) {
             taczadditions$hiddenLaserRoot = root;
             taczadditions$savedLaserVisibility = root.visible;
@@ -54,6 +55,8 @@ public class BedrockAttachmentModelLaserToggleMixin {
 
     @Unique
     private static boolean taczadditions$isEquippedLaser(ItemStack attachmentStack, ItemStack gunStack) {
+        if (attachmentStack == null || attachmentStack.isEmpty()
+                || gunStack == null || gunStack.isEmpty()) return false;
         if (!(gunStack.getItem() instanceof IGun gun)) return false;
 
         ItemStack laser = gun.getAttachment(gunStack, AttachmentType.LASER);

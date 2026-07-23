@@ -19,11 +19,12 @@ public final class ClientLaserToggleState {
 
     // A disabled or absent server feature forces lasers on regardless of saved per-gun state.
     public static boolean isLaserEnabled(ItemStack gunStack) {
+        if (gunStack == null || gunStack.isEmpty()) return true;
         return !toggleAllowed || LaserToggleData.isEnabled(gunStack);
     }
 
     public static void beginAttachmentRender(ItemStack gunStack) {
-        attachmentRenderGun = gunStack;
+        attachmentRenderGun = gunStack == null ? ItemStack.EMPTY : gunStack;
     }
 
     public static void endAttachmentRender() {
@@ -31,7 +32,8 @@ public final class ClientLaserToggleState {
     }
 
     public static boolean isRenderedLaserEnabled(ItemStack renderedStack) {
-        return isLaserEnabled(attachmentRenderGun.isEmpty() ? renderedStack : attachmentRenderGun);
+        ItemStack safeRenderedStack = renderedStack == null ? ItemStack.EMPTY : renderedStack;
+        return isLaserEnabled(attachmentRenderGun.isEmpty() ? safeRenderedStack : attachmentRenderGun);
     }
 
     public static void reset() {
