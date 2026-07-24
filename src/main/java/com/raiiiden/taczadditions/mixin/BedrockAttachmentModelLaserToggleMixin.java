@@ -84,10 +84,11 @@ public class BedrockAttachmentModelLaserToggleMixin {
         if (!(gunStack.getItem() instanceof IGun gun)) return false;
 
         ItemStack laser = gun.getAttachment(gunStack, AttachmentType.LASER);
-        if (laser.isEmpty()) {
+        if (laser == null || laser.isEmpty()) {
             laser = gun.getBuiltinAttachment(gunStack, AttachmentType.LASER);
         }
-        return !laser.isEmpty() && ItemStack.isSameItemSameTags(laser, attachmentStack);
+        return laser != null && !laser.isEmpty()
+                && ItemStack.isSameItemSameTags(laser, attachmentStack);
     }
 
 }

@@ -238,7 +238,7 @@ public class GunMovementMixin {
     private void applyRecoilKick(ItemStack stack, LocalPlayer player, float partialTick, PoseStack poseStack, ItemDisplayContext ctx, int light, GunDisplayInstance display, CallbackInfo ci) {
         // Recoil kick
         float kickAngle = TacZAdditionsConfig.CLIENT.recoilKickAngle.get().floatValue();
-        if (kickAngle > 0f) {
+        if (kickAngle != 0f) {
             float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
             if (recoilProgress > 0f) {
                 recoilProgress *= recoilProgress;

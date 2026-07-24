@@ -31,6 +31,7 @@ public class GunFireEventHandler {
         LivingEntity shooter = event.getShooter();
         ItemStack gun = event.getGunItemStack();
         if (gun.getOrCreateTag().getByte("Jammed") != 0) return;
+        if (isMuzzleFlashBlacklisted(gun)) return;
 
         int lightLevel = isSilenced(gun) ? 6 : 15;
 
@@ -42,6 +43,12 @@ public class GunFireEventHandler {
             BlockPos muzzlePos = BlockPos.containing(shooter.getEyePosition());
             ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);
         }
+    }
+
+    private static boolean isMuzzleFlashBlacklisted(ItemStack gun) {
+        if (gun.isEmpty() || !(gun.getItem() instanceof IGun igun)) return false;
+        String gunId = igun.getGunId(gun).toString();
+        return TacZAdditionsConfig.SERVER.muzzleFlashWeaponBlacklist.get().contains(gunId);
     }
 
     private static boolean shouldUseBlockLight(ItemStack gun) {
