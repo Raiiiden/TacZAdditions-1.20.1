@@ -14,9 +14,7 @@ import org.joml.Matrix4f;
 import org.joml.Quaternionf;
 import org.joml.Vector3f;
 
- // The dot is drawn as a camera-facing billboard inside the level render pass, so it is recomputed
- // and redrawn every frame from the same partial tick — there is structurally zero latency between the
- // raytraced hit position and what is shown, regardless of framerate.
+ // Draws the camera-facing dot from the current frame's ray-traced position.
 public final class LaserDotRenderer extends RenderType {
     private static final ResourceLocation TEXTURE =
             new ResourceLocation("taczadditions", "textures/particle/laser_dot.png");

@@ -11,133 +11,247 @@ import java.util.List;
 public class TacZAdditionsConfig {
     private static final Logger LOGGER = LogManager.getLogger();
 
-    public static final Server SERVER;
-    public static final ForgeConfigSpec SERVER_SPEC;
+    public static final Common COMMON;
+    public static final ForgeConfigSpec COMMON_SPEC;
     public static final Client CLIENT;
     public static final ForgeConfigSpec CLIENT_SPEC;
 
     static {
-        Pair<Server, ForgeConfigSpec> serverConfig = new ForgeConfigSpec.Builder().configure(Server::new);
-        SERVER_SPEC = serverConfig.getRight();
-        SERVER = serverConfig.getLeft();
+        Pair<Common, ForgeConfigSpec> commonConfig = new ForgeConfigSpec.Builder().configure(Common::new);
+        COMMON_SPEC = commonConfig.getRight();
+        COMMON = commonConfig.getLeft();
 
         Pair<Client, ForgeConfigSpec> clientConfig = new ForgeConfigSpec.Builder().configure(Client::new);
         CLIENT_SPEC = clientConfig.getRight();
         CLIENT = clientConfig.getLeft();
     }
 
-    public static class Server {
-        public final ForgeConfigSpec.BooleanValue enableMuzzleFlash;
-        public final ForgeConfigSpec.ConfigValue<List<? extends String>> muzzleFlashWeaponBlacklist;
-        public final ForgeConfigSpec.DoubleValue laserDotMaxDistance;
-        public final ForgeConfigSpec.BooleanValue enableLaserToggle;
+    // Gameplay settings use local values until a connected server supplies its snapshot.
+    public static class Common {
+        public final SyncedValue<Boolean> enableRecoilRecovery;
+        public final SyncedValue<Boolean> enableMuzzleFlash;
+        public final SyncedValue<List<? extends String>> muzzleFlashWeaponBlacklist;
+        public final SyncedValue<List<? extends String>> silencedGunIds;
+        public final SyncedValue<List<? extends String>> coloredMuzzleFlashGunColors;
+        public final SyncedValue<Double> laserDotMaxDistance;
+        public final SyncedValue<Boolean> enableLaserToggle;
 
-        public final ForgeConfigSpec.BooleanValue forceBlockLightForFastGuns;
-        public final ForgeConfigSpec.IntValue fastGunRpmThreshold;
+        public final SyncedValue<Boolean> forceBlockLightForFastGuns;
+        public final SyncedValue<Integer> fastGunRpmThreshold;
+
+        // Gun tuck, visual and gameplay alike, so the drawn barrel matches the enforced bullet angle
+        public final SyncedValue<Boolean> enableGunTuck;
+        public final SyncedValue<Double> tuckDistance;
+        public final SyncedValue<Double> tuckMaxAngle;
+        public final SyncedValue<Double> tuckMaxTranslate;
+        public final SyncedValue<Boolean> tuckAffectsBulletAngle;
+        public final SyncedValue<Double> tuckBulletMaxAngle;
+        public final SyncedValue<Boolean> blockFireWhenTucked;
+        public final SyncedValue<Double> tuckFireBlockThreshold;
+
+        // Scope sway
+        public final SyncedValue<Boolean> enableScopeSway;
+        public final SyncedValue<Double> scopeSwayStrength;
+        public final SyncedValue<Double> scopeSwaySpeed;
+        public final SyncedValue<Double> scopeSwayMinZoom;
+        public final SyncedValue<Double> crouchStabilizeTime;
+        public final SyncedValue<Double> crouchSporadicTime;
+        public final SyncedValue<Double> crouchCooldownTime;
+        public final SyncedValue<Double> sporadicSwayStrength;
+        public final SyncedValue<Double> sporadicSwaySpeed;
+
         // Category-based vertical recoil
-        public final ForgeConfigSpec.DoubleValue recoilPistolVertical;
-        public final ForgeConfigSpec.DoubleValue recoilRifleVertical;
-        public final ForgeConfigSpec.DoubleValue recoilSniperVertical;
-        public final ForgeConfigSpec.DoubleValue recoilSMGVertical;
-        public final ForgeConfigSpec.DoubleValue recoilShotgunVertical;
-        public final ForgeConfigSpec.DoubleValue recoilRPGVertical;
-        public final ForgeConfigSpec.DoubleValue recoilMGVertical;
+        public final SyncedValue<Double> recoilPistolVertical;
+        public final SyncedValue<Double> recoilRifleVertical;
+        public final SyncedValue<Double> recoilSniperVertical;
+        public final SyncedValue<Double> recoilSMGVertical;
+        public final SyncedValue<Double> recoilShotgunVertical;
+        public final SyncedValue<Double> recoilRPGVertical;
+        public final SyncedValue<Double> recoilMGVertical;
 
         // Category-based horizontal recoil
-        public final ForgeConfigSpec.DoubleValue recoilPistolHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilRifleHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilSniperHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilSMGHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilShotgunHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilRPGHorizontal;
-        public final ForgeConfigSpec.DoubleValue recoilMGHorizontal;
+        public final SyncedValue<Double> recoilPistolHorizontal;
+        public final SyncedValue<Double> recoilRifleHorizontal;
+        public final SyncedValue<Double> recoilSniperHorizontal;
+        public final SyncedValue<Double> recoilSMGHorizontal;
+        public final SyncedValue<Double> recoilShotgunHorizontal;
+        public final SyncedValue<Double> recoilRPGHorizontal;
+        public final SyncedValue<Double> recoilMGHorizontal;
 
-        public Server(ForgeConfigSpec.Builder builder) {
-            builder.comment("TacZ Additions - Server Config").push("server");
+        public Common(ForgeConfigSpec.Builder builder) {
+            builder.comment("TacZ Additions - Common Config",
+                            "On a server these values are the server's: they are sent to each player on login",
+                            "and override that player's own file until they disconnect.")
+                    .push("common");
 
-            enableMuzzleFlash = builder
+            enableRecoilRecovery = ConfigSync.bool("enableRecoilRecovery", builder
+                    .comment("If true, recoil recovery is enabled (Default in TaCZ). Disable to make recoil harder to control.")
+                    .define("enableRecoilRecovery", true));
+
+            enableMuzzleFlash = ConfigSync.bool("enableMuzzleFlash", builder
                     .comment("If false, muzzle flash will not be sent to clients.")
-                    .define("enableMuzzleFlash", true);
+                    .define("enableMuzzleFlash", true));
 
-            muzzleFlashWeaponBlacklist = builder
+            muzzleFlashWeaponBlacklist = ConfigSync.stringList("muzzleFlashWeaponBlacklist", builder
                     .comment(
                             "Gun IDs that must not produce muzzle-flash light. This is enforced by the server.",
                             "Use TaCZ gun IDs such as \"tacz:ak47\". Invalid resource locations are rejected.")
                     .defineListAllowEmpty(
                             "muzzleFlashWeaponBlacklist",
-                            List.of(),
-                            value -> value instanceof String id && ResourceLocation.tryParse(id) != null);
+                            List.of("example:gun_id"),
+                            value -> value instanceof String id && ResourceLocation.tryParse(id) != null));
 
-            laserDotMaxDistance = builder
+            silencedGunIds = ConfigSync.stringList("silencedGunIds", builder
+                    .comment(
+                            "Gun IDs that TaCZ should always treat as silenced.",
+                            "Use this for integrated suppressors that do not expose TaCZ's silence modifier.",
+                            "This enables the gun's silenced sound and reduced muzzle-flash light.",
+                            "Example: \"tacz:example_integrally_suppressed_gun\".")
+                    .defineListAllowEmpty(
+                            "silencedGunIds",
+                            List.of("example:gun_id"),
+                            value -> value instanceof String id && ResourceLocation.tryParse(id) != null));
+
+            coloredMuzzleFlashGunColors = ConfigSync.stringList("coloredMuzzleFlashGunColors", builder
+                    .comment(
+                            "Optional per-gun muzzle-flash colors.",
+                            "Requires the Colorful Lighting: Sodium/Embeddium Edition mod on the client.",
+                            "Format: \"gun_id=#RRGGBB\". Example: \"tacz:ak47=#FF8A33\".")
+                    .defineListAllowEmpty(
+                            "coloredMuzzleFlashGunColors",
+                            List.of("example:gun_id=#FF8A33"),
+                            TacZAdditionsConfig::isValidGunColorEntry));
+
+            laserDotMaxDistance = ConfigSync.dbl("laserDotMaxDistance", builder
                     .comment("Maximum ray trace distance for laser dot in blocks.")
-                    .defineInRange("laserDotMaxDistance", 100.0, 1.0, 500.0);
+                    .defineInRange("laserDotMaxDistance", 100.0, 1.0, 500.0));
 
-            enableLaserToggle = builder
+            enableLaserToggle = ConfigSync.bool("enableLaserToggle", builder
                     .comment("Allow players to toggle equipped laser attachments with a keybind. If false, lasers are always on.")
-                    .define("enableLaserToggle", true);
+                    .define("enableLaserToggle", true));
 
-            forceBlockLightForFastGuns = builder
+            forceBlockLightForFastGuns = ConfigSync.bool("forceBlockLightForFastGuns", builder
                     .comment("If true, guns firing above the RPM threshold will use light blocks instead of dynamic lights for more accurate muzzle flash timing.")
-                    .define("forceBlockLightForFastGuns", true);
+                    .define("forceBlockLightForFastGuns", true));
 
-            fastGunRpmThreshold = builder
+            fastGunRpmThreshold = ConfigSync.integer("fastGunRpmThreshold", builder
                     .comment("Guns firing at or above this RPM will use light blocks for muzzle flash when forceBlockLightForFastGuns is enabled.")
-                    .defineInRange("fastGunRpmThreshold", 600, 1, 6000);
+                    .defineInRange("fastGunRpmThreshold", 600, 1, 6000));
+
+            builder.push("gunTuck");
+            enableGunTuck = ConfigSync.bool("gunTuck.enableGunTuck", builder
+                    .comment("If true, the gun pitches up when close to a wall.")
+                    .define("enableGunTuck", true));
+            tuckDistance = ConfigSync.dbl("gunTuck.tuckDistance", builder
+                    .comment("Distance in blocks at which gun tuck begins. Drives both the visual tuck on",
+                            "clients and the bullet angle / fire block below, so every player uses this value.")
+                    .defineInRange("tuckDistance", 1.0, 0.1, 3.0));
+            tuckMaxAngle = ConfigSync.dbl("gunTuck.maxAngle", builder
+                    .comment("Maximum pitch angle when fully tucked (degrees). Negative values invert the movement.")
+                    .defineInRange("maxAngle", 60.0, -90.0, 90.0));
+            tuckMaxTranslate = ConfigSync.dbl("gunTuck.maxTranslate", builder
+                    .comment("Maximum Z pullback when fully tucked.")
+                    .defineInRange("maxTranslate", 1.0, -5.0, 5.0));
+            tuckAffectsBulletAngle = ConfigSync.bool("gunTuck.tuckAffectsBulletAngle", builder
+                    .comment("If true, bullets leave the barrel at an angle that follows the gun tuck.")
+                    .define("tuckAffectsBulletAngle", true));
+            tuckBulletMaxAngle = ConfigSync.dbl("gunTuck.tuckBulletMaxAngle", builder
+                    .comment("Pitch offset applied to bullets at full tuck (degrees, upward).",
+                            "Keep this equal to maxAngle above so shots follow the barrel players see.",
+                            "Negative values aim the shot downward instead.")
+                    .defineInRange("tuckBulletMaxAngle", 60.0, -90.0, 90.0));
+            blockFireWhenTucked = ConfigSync.bool("gunTuck.blockFireWhenTucked", builder
+                    .comment("If true, the gun cannot be fired once it is tucked past the threshold below.")
+                    .define("blockFireWhenTucked", true));
+            tuckFireBlockThreshold = ConfigSync.dbl("gunTuck.tuckFireBlockThreshold", builder
+                    .comment("Tuck amount (0 = not tucked, 1 = fully tucked) at which firing is blocked.",
+                            "1.0 is never reached in practice, so it effectively disables the block.")
+                    .defineInRange("tuckFireBlockThreshold", 0.5, 0.05, 1.0));
+            builder.pop();
+
+            builder.push("scopeSway");
+            enableScopeSway = ConfigSync.bool("scopeSway.enableScopeSway", builder
+                    .comment("Enable subtle camera sway when aiming with high-magnification scopes (4x+)")
+                    .define("enableScopeSway", true));
+            scopeSwayStrength = ConfigSync.dbl("scopeSway.strength", builder
+                    .comment("Maximum sway arc when scoped (degrees)")
+                    .defineInRange("strength", 0.01, -1.0, 1.0));
+            scopeSwaySpeed = ConfigSync.dbl("scopeSway.speed", builder
+                    .comment("Seconds per full sway cycle")
+                    .defineInRange("speed", 40.2, 1.0, 120.0));
+            scopeSwayMinZoom = ConfigSync.dbl("scopeSway.minZoom", builder
+                    .comment("Minimum zoom level required before scope sway activates")
+                    .defineInRange("minZoom", 4.0, 1.0, 100.0));
+            crouchStabilizeTime = ConfigSync.dbl("scopeSway.crouchStabilizeTime", builder
+                    .comment("Milliseconds to hold crouch to stabilize sway")
+                    .defineInRange("crouchStabilizeTime", 3000.0, 0.0, 10000.0));
+            crouchSporadicTime = ConfigSync.dbl("scopeSway.crouchSporadicTime", builder
+                    .comment("Milliseconds of sporadic sway after stabilizing")
+                    .defineInRange("crouchSporadicTime", 3000.0, 0.0, 10000.0));
+            crouchCooldownTime = ConfigSync.dbl("scopeSway.crouchCooldownTime", builder
+                    .comment("Milliseconds cooldown after sporadic phase before you can stabilize again")
+                    .defineInRange("crouchCooldownTime", 8000.0, 0.0, 20000.0));
+            sporadicSwayStrength = ConfigSync.dbl("scopeSway.sporadicSwayStrength", builder
+                    .comment("Multiplier for sway strength during sporadic phase")
+                    .defineInRange("sporadicSwayStrength", 7.0, -10.0, 10.0));
+            sporadicSwaySpeed = ConfigSync.dbl("scopeSway.sporadicSwaySpeed", builder
+                    .comment("Multiplier for sway speed during sporadic phase")
+                    .defineInRange("sporadicSwaySpeed", 0.3, 0.1, 5.0));
+            builder.pop();
 
             // Vertical multipliers
-            recoilPistolVertical = builder
+            recoilPistolVertical = ConfigSync.dbl("recoilPistolVertical", builder
                     .comment("Vertical recoil multiplier for pistols. Negative values invert the recoil direction.")
-                    .defineInRange("recoilPistolVertical", 1.0, -10.0, 10.0);
-            recoilRifleVertical = builder
+                    .defineInRange("recoilPistolVertical", 1.0, -10.0, 10.0));
+            recoilRifleVertical = ConfigSync.dbl("recoilRifleVertical", builder
                     .comment("Vertical recoil multiplier for rifles. Negative values invert the recoil direction.")
-                    .defineInRange("recoilRifleVertical", 1.0, -10.0, 10.0);
-            recoilSniperVertical = builder
+                    .defineInRange("recoilRifleVertical", 1.0, -10.0, 10.0));
+            recoilSniperVertical = ConfigSync.dbl("recoilSniperVertical", builder
                     .comment("Vertical recoil multiplier for snipers. Negative values invert the recoil direction.")
-                    .defineInRange("recoilSniperVertical", 1.0, -10.0, 10.0);
-            recoilSMGVertical = builder
+                    .defineInRange("recoilSniperVertical", 1.0, -10.0, 10.0));
+            recoilSMGVertical = ConfigSync.dbl("recoilSMGVertical", builder
                     .comment("Vertical recoil multiplier for SMGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilSMGVertical", 1.0, -10.0, 10.0);
-            recoilShotgunVertical = builder
+                    .defineInRange("recoilSMGVertical", 1.0, -10.0, 10.0));
+            recoilShotgunVertical = ConfigSync.dbl("recoilShotgunVertical", builder
                     .comment("Vertical recoil multiplier for shotguns. Negative values invert the recoil direction.")
-                    .defineInRange("recoilShotgunVertical", 1.0, -10.0, 10.0);
-            recoilRPGVertical = builder
+                    .defineInRange("recoilShotgunVertical", 1.0, -10.0, 10.0));
+            recoilRPGVertical = ConfigSync.dbl("recoilRPGVertical", builder
                     .comment("Vertical recoil multiplier for RPGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilRPGVertical", 1.0, -10.0, 10.0);
-            recoilMGVertical = builder
+                    .defineInRange("recoilRPGVertical", 1.0, -10.0, 10.0));
+            recoilMGVertical = ConfigSync.dbl("recoilMGVertical", builder
                     .comment("Vertical recoil multiplier for MGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilMGVertical", 1.0, -10.0, 10.0);
+                    .defineInRange("recoilMGVertical", 1.0, -10.0, 10.0));
 
             // Horizontal multipliers
-            recoilPistolHorizontal = builder
+            recoilPistolHorizontal = ConfigSync.dbl("recoilPistolHorizontal", builder
                     .comment("Horizontal recoil multiplier for pistols. Negative values invert the recoil direction.")
-                    .defineInRange("recoilPistolHorizontal", 1.0, -10.0, 10.0);
-            recoilRifleHorizontal = builder
+                    .defineInRange("recoilPistolHorizontal", 1.0, -10.0, 10.0));
+            recoilRifleHorizontal = ConfigSync.dbl("recoilRifleHorizontal", builder
                     .comment("Horizontal recoil multiplier for rifles. Negative values invert the recoil direction.")
-                    .defineInRange("recoilRifleHorizontal", 1.0, -10.0, 10.0);
-            recoilSniperHorizontal = builder
+                    .defineInRange("recoilRifleHorizontal", 1.0, -10.0, 10.0));
+            recoilSniperHorizontal = ConfigSync.dbl("recoilSniperHorizontal", builder
                     .comment("Horizontal recoil multiplier for snipers. Negative values invert the recoil direction.")
-                    .defineInRange("recoilSniperHorizontal", 1.0, -10.0, 10.0);
-            recoilSMGHorizontal = builder
+                    .defineInRange("recoilSniperHorizontal", 1.0, -10.0, 10.0));
+            recoilSMGHorizontal = ConfigSync.dbl("recoilSMGHorizontal", builder
                     .comment("Horizontal recoil multiplier for SMGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilSMGHorizontal", 1.0, -10.0, 10.0);
-            recoilShotgunHorizontal = builder
+                    .defineInRange("recoilSMGHorizontal", 1.0, -10.0, 10.0));
+            recoilShotgunHorizontal = ConfigSync.dbl("recoilShotgunHorizontal", builder
                     .comment("Horizontal recoil multiplier for shotguns. Negative values invert the recoil direction.")
-                    .defineInRange("recoilShotgunHorizontal", 1.0, -10.0, 10.0);
-            recoilRPGHorizontal = builder
+                    .defineInRange("recoilShotgunHorizontal", 1.0, -10.0, 10.0));
+            recoilRPGHorizontal = ConfigSync.dbl("recoilRPGHorizontal", builder
                     .comment("Horizontal recoil multiplier for RPGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilRPGHorizontal", 1.0, -10.0, 10.0);
-            recoilMGHorizontal = builder
+                    .defineInRange("recoilRPGHorizontal", 1.0, -10.0, 10.0));
+            recoilMGHorizontal = ConfigSync.dbl("recoilMGHorizontal", builder
                     .comment("Horizontal recoil multiplier for MGs. Negative values invert the recoil direction.")
-                    .defineInRange("recoilMGHorizontal", 1.0, -10.0, 10.0);
+                    .defineInRange("recoilMGHorizontal", 1.0, -10.0, 10.0));
             builder.pop();
         }
     }
 
+    // Cosmetic gun handling only, never sent anywhere: this stays each player's own preference.
     public static class Client {
-        public final ForgeConfigSpec.BooleanValue enableRecoilRecovery;
         public final ForgeConfigSpec.BooleanValue enableGunMovement;
         public final ForgeConfigSpec.BooleanValue enableStrafeMovement;
-        public final ForgeConfigSpec.BooleanValue enableScopeSway;
 
         // Strafing - Hipfire
         public final ForgeConfigSpec.DoubleValue strafeYawMultiplier;
@@ -151,18 +265,6 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue maxStrafeYaw;
         public final ForgeConfigSpec.DoubleValue maxStrafeRoll;
         public final ForgeConfigSpec.DoubleValue strafeSmoothing;
-
-        // Scope Sway
-        public final ForgeConfigSpec.DoubleValue scopeSwayStrength;
-        public final ForgeConfigSpec.DoubleValue scopeSwaySpeed;
-        public final ForgeConfigSpec.DoubleValue scopeSwayMinZoom;
-
-        public final ForgeConfigSpec.DoubleValue crouchStabilizeTime;
-        public final ForgeConfigSpec.DoubleValue crouchSporadicTime;
-        public final ForgeConfigSpec.DoubleValue crouchCooldownTime;
-
-        public final ForgeConfigSpec.DoubleValue sporadicSwayStrength;
-        public final ForgeConfigSpec.DoubleValue sporadicSwaySpeed;
 
         // Hipfire
         public final ForgeConfigSpec.DoubleValue hipfireYawMultiplier;
@@ -184,12 +286,6 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue recoilKickAngle;
         public final ForgeConfigSpec.DoubleValue recoilKickPivot;
 
-        // Gun Tuck
-        public final ForgeConfigSpec.BooleanValue enableGunTuck;
-        public final ForgeConfigSpec.DoubleValue gunTuckDistance;
-        public final ForgeConfigSpec.DoubleValue gunTuckMaxAngle;
-        public final ForgeConfigSpec.DoubleValue gunTuckMaxTranslate;
-
         // Misc
         public final ForgeConfigSpec.DoubleValue dragSmoothing;
         public final ForgeConfigSpec.DoubleValue decayFactor;
@@ -203,9 +299,6 @@ public class TacZAdditionsConfig {
 
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
-            enableRecoilRecovery = builder
-                    .comment("If true, recoil recovery is enabled (Default in TaCZ), disable to make recoil harder to control.")
-                    .define("enableRecoilRecovery", true);
 
             enableGunMovement = builder
                     .comment("If false, disables all gun movement (sway, roll, etc).")
@@ -214,10 +307,6 @@ public class TacZAdditionsConfig {
             enableStrafeMovement = builder
                     .comment("If false, disables sway/roll from strafing movement.")
                     .define("enableStrafeMovement", true);
-
-            enableScopeSway = builder
-                    .comment("Enable subtle camera sway when aiming with high-magnification scopes (4x+)")
-                    .define("enableScopeSway", true);
 
             builder.push("hipfire");
             hipfireYawMultiplier = builder
@@ -228,7 +317,7 @@ public class TacZAdditionsConfig {
                     .defineInRange("pitchMultiplier", 1.2, -10.0, 10.0);
             hipfireRollFactor = builder
                     .comment("Roll factor when hip-firing. Negative values invert the movement.")
-                    .defineInRange("rollFactor", 2.75, -10.0, 10.0);
+                    .defineInRange("rollFactor", 1.75, -10.0, 10.0);
             maxHipPitch = builder
                     .comment("Maximum pitch offset when hip-firing (degrees)")
                     .defineInRange("maxHipPitch", 6.0, 0.0, 45.0);
@@ -296,48 +385,6 @@ public class TacZAdditionsConfig {
                     .defineInRange("kickPivot", 0.0, -2.0, 2.0);
             builder.pop();
 
-            builder.push("gunTuck");
-            enableGunTuck = builder
-                    .comment("If true, the gun pitches up when close to a wall.")
-                    .define("enableGunTuck", true);
-            gunTuckDistance = builder
-                    .comment("Distance in blocks at which gun tuck begins.")
-                    .defineInRange("tuckDistance", 1.0, 0.1, 3.0);
-            gunTuckMaxAngle = builder
-                    .comment("Maximum pitch angle when fully tucked (degrees). Negative values invert the movement.")
-                    .defineInRange("maxAngle", 60.0, -90.0, 90.0);
-            gunTuckMaxTranslate = builder
-                    .comment("Maximum Z pullback when fully tucked.")
-                    .defineInRange("maxTranslate", 1.0, -5.0, 5.0);
-            builder.pop();
-
-            builder.push("scopeSway");
-            scopeSwayStrength = builder
-                    .comment("Maximum sway arc when scoped (degrees)")
-                    .defineInRange("strength", 0.01, -1.0, 1.0);
-            scopeSwaySpeed = builder
-                    .comment("Seconds per full sway cycle")
-                    .defineInRange("speed", 40.2, 1.0, 120.0);
-            scopeSwayMinZoom = builder
-                    .comment("Minimum zoom level required before scope sway activates")
-                    .defineInRange("minZoom", 4.0, 1.0, 100.0);
-            crouchStabilizeTime = builder
-                    .comment("Milliseconds to hold crouch to stabilize sway")
-                    .defineInRange("crouchStabilizeTime", 3000.0, 0.0, 10000.0);
-            crouchSporadicTime = builder
-                    .comment("Milliseconds of sporadic sway after stabilizing")
-                    .defineInRange("crouchSporadicTime", 3000.0, 0.0, 10000.0);
-            crouchCooldownTime = builder
-                    .comment("Milliseconds cooldown after sporadic phase before you can stabilize again")
-                    .defineInRange("crouchCooldownTime", 8000.0, 0.0, 20000.0);
-            sporadicSwayStrength = builder
-                    .comment("Multiplier for sway strength during sporadic phase")
-                    .defineInRange("sporadicSwayStrength", 7.0, -10.0, 10.0);
-            sporadicSwaySpeed = builder
-                    .comment("Multiplier for sway speed during sporadic phase")
-                    .defineInRange("sporadicSwaySpeed", 0.3, 0.1, 5.0);
-            builder.pop();
-
             dragSmoothing = builder
                     .comment("Drag smoothing factor (lower = more inertia).")
                     .defineInRange("dragSmoothing", 0.1, 0.0, 1.0);
@@ -372,6 +419,14 @@ public class TacZAdditionsConfig {
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
                 net.minecraftforge.fml.config.ModConfig.Type.CLIENT, CLIENT_SPEC);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
-                net.minecraftforge.fml.config.ModConfig.Type.SERVER, SERVER_SPEC);
+                net.minecraftforge.fml.config.ModConfig.Type.COMMON, COMMON_SPEC);
+    }
+
+    private static boolean isValidGunColorEntry(Object value) {
+        if (!(value instanceof String entry)) return false;
+        int separator = entry.lastIndexOf('=');
+        if (separator <= 0 || separator == entry.length() - 1) return false;
+        if (ResourceLocation.tryParse(entry.substring(0, separator).trim()) == null) return false;
+        return entry.substring(separator + 1).trim().matches("#[0-9a-fA-F]{6}");
     }
 }

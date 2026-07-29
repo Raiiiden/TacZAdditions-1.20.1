@@ -8,19 +8,22 @@ import java.util.function.Supplier;
 public class MuzzleFlashPacket {
     public final int entityId;
     public final int lightLevel;
+    public final int color;
 
-    public MuzzleFlashPacket(int entityId, int lightLevel) {
+    public MuzzleFlashPacket(int entityId, int lightLevel, int color) {
         this.entityId = entityId;
         this.lightLevel = lightLevel;
+        this.color = color;
     }
 
     public static void encode(MuzzleFlashPacket msg, FriendlyByteBuf buffer) {
         buffer.writeInt(msg.entityId);
         buffer.writeInt(msg.lightLevel);
+        buffer.writeInt(msg.color);
     }
 
     public static MuzzleFlashPacket decode(FriendlyByteBuf buffer) {
-        return new MuzzleFlashPacket(buffer.readInt(), buffer.readInt());
+        return new MuzzleFlashPacket(buffer.readInt(), buffer.readInt(), buffer.readInt());
     }
 
     public static void handle(MuzzleFlashPacket msg, Supplier<NetworkEvent.Context> contextSupplier) {

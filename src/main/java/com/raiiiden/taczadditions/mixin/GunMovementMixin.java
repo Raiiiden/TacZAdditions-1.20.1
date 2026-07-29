@@ -67,8 +67,7 @@ public class GunMovementMixin {
         float timeFactor = deltaTime * 60f;
         float currentPitch = player.getViewXRot(partialTick);
         float currentYaw = player.getViewYRot(partialTick);
-        // Use raw per-frame delta — multiplying by timeFactor squared the deltaTime
-        // dependence and amplified frame-time jitter into visible jagged motion.
+        // Use raw frame delta to avoid amplifying frame-time jitter.
         float deltaPitch = currentPitch - lastPitch;
         float deltaYaw = currentYaw - lastYaw;
 
@@ -91,9 +90,7 @@ public class GunMovementMixin {
         float rollSens = get("rollSensitivity", DEFAULT_ROLL_SENSITIVITY);
         float maxRoll = get("maxTiltAngle", DEFAULT_MAX_ROLL_AIM + (DEFAULT_MAX_ROLL_HIP - DEFAULT_MAX_ROLL_AIM) * (1.0f - aimingProgress));
 
-        // Velocity decay is per-time-unit (pow with timeFactor), not per-frame, so the
-        // gun no longer "drifts longer" at low FPS. Position accumulation scales by
-        // timeFactor so per-second motion is the same regardless of framerate.
+        // Time-scaled decay keeps drift consistent across frame rates.
         float velDecay = (float) Math.pow(0.85f, timeFactor);
         pitchVelocity = pitchVelocity * velDecay + deltaPitch * drag * hipFirePitchFactor;
         yawVelocity = yawVelocity * velDecay + deltaYaw * drag * hipFireFactor;
@@ -183,8 +180,9 @@ public class GunMovementMixin {
         }
 
         // --- Gun tuck ---
-        if (TacZAdditionsConfig.CLIENT.enableGunTuck.get() && stack.getItem() instanceof AbstractGunItem) {
-            float maxDist = TacZAdditionsConfig.CLIENT.gunTuckDistance.get().floatValue();
+        if (TacZAdditionsConfig.COMMON.enableGunTuck.get() && stack.getItem() instanceof AbstractGunItem) {
+            // Server-owned so the visual tuck matches where bullets go and cannot be tuned locally.
+            float maxDist = TacZAdditionsConfig.COMMON.tuckDistance.get().floatValue();
             float tuckTarget = GunTuckHandler.calculateTarget(player, partialTick, maxDist);
             // Always update — passes 0 on miss so it smoothly returns rather than snapping
             GunTuckHandler.update(tuckTarget, deltaTime);
@@ -247,9 +245,9 @@ public class GunMovementMixin {
         }
 
         // Gun tuck
-        if (TacZAdditionsConfig.CLIENT.enableGunTuck.get() && GunTuckHandler.tuckProgress > 0f) {
-            float maxAngle = TacZAdditionsConfig.CLIENT.gunTuckMaxAngle.get().floatValue();
-            float maxTranslate = TacZAdditionsConfig.CLIENT.gunTuckMaxTranslate.get().floatValue();
+        if (TacZAdditionsConfig.COMMON.enableGunTuck.get() && GunTuckHandler.tuckProgress > 0f) {
+            float maxAngle = TacZAdditionsConfig.COMMON.tuckMaxAngle.get().floatValue();
+            float maxTranslate = TacZAdditionsConfig.COMMON.tuckMaxTranslate.get().floatValue();
             float t = GunTuckHandler.tuckProgress;
 
             float pivotShift = 0.5f; // shift pivot toward player, tune this

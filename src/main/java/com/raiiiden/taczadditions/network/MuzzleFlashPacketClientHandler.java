@@ -15,17 +15,22 @@ public class MuzzleFlashPacketClientHandler {
     private static final boolean HAS_ATOMIC_DL = ModList.get().isLoaded("dynamiclights");
 
     public static void handle(MuzzleFlashPacket msg) {
-        if (!HAS_SODIUM_DL && !HAS_ATOMIC_DL) return;
-
         Minecraft mc = Minecraft.getInstance();
         if (mc.level == null) return;
 
         Entity entity = mc.level.getEntity(msg.entityId);
         if (entity == null) return;
 
-        if (HAS_SODIUM_DL) {
-            SodiumDLAdapter.addFlash(entity, msg.lightLevel);
-        } else {
+        if (msg.lightLevel <= 0) {
+            if (msg.color >= 0) {
+                SodiumDLAdapter.addFlash(entity, 0, msg.color);
+            }
+        } else if (HAS_SODIUM_DL) {
+            SodiumDLAdapter.addFlash(entity, msg.lightLevel, msg.color);
+        } else if (HAS_ATOMIC_DL) {
+            if (msg.color >= 0) {
+                SodiumDLAdapter.addFlash(entity, 0, msg.color);
+            }
             ClientGunFireLightManager.addLight(entity, msg.lightLevel);
         }
     }

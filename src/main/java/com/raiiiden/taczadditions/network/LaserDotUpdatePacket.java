@@ -57,12 +57,12 @@ public class LaserDotUpdatePacket {
             return false;
         }
 
-        if (TacZAdditionsConfig.SERVER.enableLaserToggle.get()
+        if (TacZAdditionsConfig.COMMON.enableLaserToggle.get()
                 && !LaserToggleData.isEnabled(sender.getMainHandItem())) {
             return false;
         }
 
-        double maxDistance = TacZAdditionsConfig.SERVER.laserDotMaxDistance.get() + 2.0;
+        double maxDistance = TacZAdditionsConfig.COMMON.laserDotMaxDistance.get() + 2.0;
         return sender.distanceToSqr(msg.x, msg.y, msg.z) <= maxDistance * maxDistance;
     }
 }

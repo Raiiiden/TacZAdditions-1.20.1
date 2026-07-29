@@ -3,7 +3,6 @@ package com.raiiiden.taczadditions;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
 import com.raiiiden.taczadditions.registry.ModSounds;
-import net.minecraftforge.common.MinecraftForge;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
 import net.minecraftforge.fml.common.Mod;
@@ -36,29 +35,30 @@ public class TaczAdditions {
 
     LOGGER.info("[TacZAdditions] DL detection — sodiumdynamiclights={}, dynamiclights={}", hasSodiumDL, hasAtomicDL);
 
+    // Always track temporary color metadata without loading optional APIs.
+    com.raiiiden.taczadditions.client.SodiumDLAdapter.init();
+
     if (hasSodiumDL) {
-      LOGGER.info("[TacZAdditions] Initializing SodiumDLAdapter");
-      com.raiiiden.taczadditions.client.SodiumDLAdapter.init();
+      LOGGER.info("[TacZAdditions] Sodium dynamic-light muzzle flashes enabled");
     } else if (hasAtomicDL) {
-      MinecraftForge.EVENT_BUS.register(
-          com.raiiiden.taczadditions.client.ClientGunFireLightManager.class);
+      com.raiiiden.taczadditions.client.ClientGunFireLightManager.init();
     }
   }
 
   private void commonSetup(FMLCommonSetupEvent event) {
     event.enqueueWork(ModNetworking::registerPackets);
 
-    // Muzzle flash dynamic lights are client-side only. The server only sends packets
-    // and uses block lights when dynamic light packets are not available.
+    // Dynamic lights are client-side; servers only send packets or place fallback blocks.
   }
 
   private void onConfigReload(ModConfigEvent.Reloading event) {
-    if (event.getConfig().getSpec() != TacZAdditionsConfig.SERVER_SPEC) return;
+    if (event.getConfig().getSpec() != TacZAdditionsConfig.COMMON_SPEC) return;
 
     var server = ServerLifecycleHooks.getCurrentServer();
     if (server == null) return;
 
     for (var player : server.getPlayerList().getPlayers()) {
+      ModNetworking.sendConfigSnapshot(player);
       ModNetworking.sendLaserToggleConfig(player);
     }
   }
