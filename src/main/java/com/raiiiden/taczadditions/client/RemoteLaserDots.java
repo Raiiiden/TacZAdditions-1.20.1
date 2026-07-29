@@ -12,9 +12,7 @@ import java.util.concurrent.ConcurrentHashMap;
 
 public final class RemoteLaserDots {
 
-     // Smoothing time constant in seconds. Smaller = snappier but can look jittery if packets jump;
-     // larger = smoother but trails further behind the real aim. ~35 ms reaches the target in roughly
-     // one-and-a-half network ticks
+     // A 35 ms smoothing constant balances packet jitter and aiming delay.
     private static final double SMOOTHING_TAU = 0.035;
 
     // Grace period after the last packet before a dot starts fading, covering brief packet hitches.
@@ -54,8 +52,7 @@ public final class RemoteLaserDots {
         }
     }
 
-    // Returns whether this entity currently has a fresh, network-synchronized dot. This avoids
-    // also rendering the approximate entity-rotation fallback intended for NPCs.
+    // Prevents the NPC fallback from duplicating a synchronized player dot.
     public static boolean hasActiveDot(int entityId) {
         Dot dot = DOTS.get(entityId);
         if (dot == null) return false;

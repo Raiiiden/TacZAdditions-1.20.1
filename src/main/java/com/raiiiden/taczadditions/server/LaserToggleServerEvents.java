@@ -14,6 +14,8 @@ public final class LaserToggleServerEvents {
     @SubscribeEvent
     public static void onPlayerLoggedIn(PlayerEvent.PlayerLoggedInEvent event) {
         if (event.getEntity() instanceof ServerPlayer player) {
+            // Apply server settings before other synchronized state.
+            ModNetworking.sendConfigSnapshot(player);
             ModNetworking.sendLaserToggleConfig(player);
         }
     }

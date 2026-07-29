@@ -25,7 +25,7 @@ public class GunFireEventHandler {
 
     @SubscribeEvent
     public static void onGunFire(GunFireEvent event) {
-        if (!TacZAdditionsConfig.SERVER.enableMuzzleFlash.get()) return;
+        if (!TacZAdditionsConfig.COMMON.enableMuzzleFlash.get()) return;
         if (!(event.getShooter().level() instanceof ServerLevel serverLevel)) return;
 
         LivingEntity shooter = event.getShooter();
@@ -34,12 +34,17 @@ public class GunFireEventHandler {
         if (isMuzzleFlashBlacklisted(gun)) return;
 
         int lightLevel = isSilenced(gun) ? 6 : 15;
+        int color = getMuzzleFlashColor(gun);
 
         boolean useBlockLight = shouldUseBlockLight(gun);
 
         if (!useBlockLight && (HAS_SODIUM_DL || HAS_ATOMIC_DL)) {
-            ModNetworking.sendMuzzleFlash(shooter, lightLevel);
+            ModNetworking.sendMuzzleFlash(shooter, lightLevel, color);
         } else {
+            // Send color-only metadata so Colorful Lighting can tint the temporary light block.
+            if (color >= 0) {
+                ModNetworking.sendMuzzleFlash(shooter, 0, color);
+            }
             BlockPos muzzlePos = BlockPos.containing(shooter.getEyePosition());
             ServerMuzzleFlashManager.placeFlash(serverLevel, muzzlePos, lightLevel);
         }
@@ -48,16 +53,32 @@ public class GunFireEventHandler {
     private static boolean isMuzzleFlashBlacklisted(ItemStack gun) {
         if (gun.isEmpty() || !(gun.getItem() instanceof IGun igun)) return false;
         String gunId = igun.getGunId(gun).toString();
-        return TacZAdditionsConfig.SERVER.muzzleFlashWeaponBlacklist.get().contains(gunId);
+        return TacZAdditionsConfig.COMMON.muzzleFlashWeaponBlacklist.get().contains(gunId);
     }
 
     private static boolean shouldUseBlockLight(ItemStack gun) {
-        if (!TacZAdditionsConfig.SERVER.forceBlockLightForFastGuns.get()) return false;
+        if (!TacZAdditionsConfig.COMMON.forceBlockLightForFastGuns.get()) return false;
         if (!(gun.getItem() instanceof IGun igun)) return false;
         int rpm = TimelessAPI.getCommonGunIndex(igun.getGunId(gun))
                 .map(index -> index.getGunData().getRoundsPerMinute())
                 .orElse(0);
-        return rpm >= TacZAdditionsConfig.SERVER.fastGunRpmThreshold.get();
+        return rpm >= TacZAdditionsConfig.COMMON.fastGunRpmThreshold.get();
+    }
+
+    private static int getMuzzleFlashColor(ItemStack gun) {
+        if (gun.isEmpty() || !(gun.getItem() instanceof IGun igun)) return -1;
+        String gunId = igun.getGunId(gun).toString();
+        for (String entry : TacZAdditionsConfig.COMMON.coloredMuzzleFlashGunColors.get()) {
+            int separator = entry.lastIndexOf('=');
+            if (separator <= 0 || !entry.substring(0, separator).trim().equals(gunId)) continue;
+            try {
+                return Integer.parseInt(entry.substring(separator + 1).trim().substring(1), 16);
+            } catch (RuntimeException ignored) {
+                // Forge validates configured entries; tolerate a malformed synchronized value.
+                return -1;
+            }
+        }
+        return -1;
     }
 
     private static boolean isSilenced(ItemStack gun) {

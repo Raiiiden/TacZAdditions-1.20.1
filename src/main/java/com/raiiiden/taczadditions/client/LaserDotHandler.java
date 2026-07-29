@@ -52,8 +52,7 @@ public class LaserDotHandler {
 
         TimelessAPI.getGunDisplay(gunStack).ifPresent(display -> {
             if (display.getGunModel() != null) {
-                // Capture immediately after this entity's held item was rendered. Gun models are
-                // shared resources, so reading the bone later could return another entity's state.
+                // Capture shared model state immediately after rendering this entity.
                 LaserVisibilityCache.captureEntity(entity.getId(), display.getGunModel());
             }
         });
@@ -81,16 +80,14 @@ public class LaserDotHandler {
             // Get the laser color
             int laserColor = getLaserColor(gunStack);
 
-            // Use the gun's actual barrel direction instead of the crosshair look vector.
-            // TaCZ caches the muzzle position in camera space after all bone animations,
-            // so this correctly follows inspect, reload, and sway animations.
+            // Use TaCZ's animated barrel direction instead of the crosshair.
             Vec3 eyePos = mc.player.getEyePosition(partialTick);
             boolean correctAnimatedAngle = shouldUseAnimatedGunAngle(mc, gunStack, partialTick);
             Vec3 barrelDir = getBarrelDirection(mc, partialTick, correctAnimatedAngle);
             if (!isFinite(barrelDir)) {
                 barrelDir = mc.player.getViewVector(partialTick);
             }
-            double maxDistance = TacZAdditionsConfig.SERVER.laserDotMaxDistance.get();
+            double maxDistance = TacZAdditionsConfig.COMMON.laserDotMaxDistance.get();
             Vec3 endPos = eyePos.add(barrelDir.scale(maxDistance));
             LaserHit hit = findHitPosition(mc.player, eyePos, endPos);
 
@@ -102,10 +99,7 @@ public class LaserDotHandler {
             }
         }
 
-        // NPCs do not have a client connection that can upload their dot like a player does, so
-        // derive it from the already-synchronized entity rotation and held gun. This also acts as a
-        // fallback for player-like NPC implementations; real remote players still use their more
-        // accurate networked barrel direction below.
+        // Derive NPC dots from synchronized rotation because NPCs cannot upload aim data.
         renderEntityLaserDots(mc, poseStack, buffers, camera, partialTick);
 
         // Other players' dots (smoothed; their updates only arrive at the 20 Hz tick rate).
@@ -190,7 +184,7 @@ public class LaserDotHandler {
     private static void renderEntityLaserDots(Minecraft mc, PoseStack poseStack,
                                                MultiBufferSource buffers, Camera camera,
                                                float partialTick) {
-        double maxDistance = TacZAdditionsConfig.SERVER.laserDotMaxDistance.get();
+        double maxDistance = TacZAdditionsConfig.COMMON.laserDotMaxDistance.get();
 
         for (Entity entity : mc.level.entitiesForRendering()) {
             if (!(entity instanceof LivingEntity shooter)
@@ -204,8 +198,7 @@ public class LaserDotHandler {
             if (!isHoldingGunWithLaser(gunStack)) continue;
             if (!LaserVisibilityCache.isEntityVisible(shooter.getId(), gunStack)) continue;
 
-            // A real remote player's uploaded dot includes first-person gun sway/recoil and is more
-            // accurate than its entity rotation. Do not draw a second, approximate dot over it.
+            // Prefer a remote player's uploaded dot over the approximate fallback.
             if (RemoteLaserDots.hasActiveDot(shooter.getId())) continue;
 
             Vec3 direction = shooter.getViewVector(partialTick);
@@ -244,8 +237,7 @@ public class LaserDotHandler {
     }
 
     private static BlockHitResult clipBlocks(Entity shooter, Vec3 start, Vec3 end) {
-        // OUTLINE matches visible block geometry, preventing the laser from passing through visible
-        // blocks that intentionally have no collision shape, such as signs and decorative blocks.
+        // OUTLINE stops lasers on visible non-collidable block geometry.
         return shooter.level().clip(new ClipContext(
                 start,
                 end,
@@ -260,8 +252,7 @@ public class LaserDotHandler {
         Vec3 ray = end.subtract(start);
         if (ray.lengthSqr() < 1.0e-12) return null;
 
-        // Minecraft reports an inside hit 0.1% along the entire ray. At a 100-block range that
-        // places the result 0.1 blocks into the wall. Reverse-trace to recover the entry surface.
+        // Reverse-trace inside hits to recover the visible entry surface.
         BlockHitResult reverseHit = clipBlocks(shooter, start.subtract(ray), start);
         if (reverseHit.getType() == HitResult.Type.MISS
                 || reverseHit.isInside()
@@ -313,8 +304,7 @@ public class LaserDotHandler {
             double distance;
 
             if (entityBox.contains(start)) {
-                // Treat an origin inside an entity as an immediate hit, but recover the entry
-                // boundary so the rendered dot does not sit inside the entity's bounding box.
+                // Move inside-entity hits back to the bounding-box surface.
                 Vec3 reverseRay = ray.normalize().scale(Math.max(ray.length(), 16.0));
                 hitVec = entityBox.clip(start.subtract(reverseRay), start).orElse(start);
                 distance = 0.0;

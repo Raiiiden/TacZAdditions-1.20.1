@@ -47,25 +47,25 @@ public class GunRecoilMixin {
 
     private float getVerticalMultiplier(GunTabType type) {
         return switch (type) {
-            case PISTOL -> TacZAdditionsConfig.SERVER.recoilPistolVertical.get().floatValue();
-            case RIFLE -> TacZAdditionsConfig.SERVER.recoilRifleVertical.get().floatValue();
-            case SNIPER -> TacZAdditionsConfig.SERVER.recoilSniperVertical.get().floatValue();
-            case SMG -> TacZAdditionsConfig.SERVER.recoilSMGVertical.get().floatValue();
-            case SHOTGUN -> TacZAdditionsConfig.SERVER.recoilShotgunVertical.get().floatValue();
-            case RPG -> TacZAdditionsConfig.SERVER.recoilRPGVertical.get().floatValue();
-            case MG -> TacZAdditionsConfig.SERVER.recoilMGVertical.get().floatValue();
+            case PISTOL -> TacZAdditionsConfig.COMMON.recoilPistolVertical.get().floatValue();
+            case RIFLE -> TacZAdditionsConfig.COMMON.recoilRifleVertical.get().floatValue();
+            case SNIPER -> TacZAdditionsConfig.COMMON.recoilSniperVertical.get().floatValue();
+            case SMG -> TacZAdditionsConfig.COMMON.recoilSMGVertical.get().floatValue();
+            case SHOTGUN -> TacZAdditionsConfig.COMMON.recoilShotgunVertical.get().floatValue();
+            case RPG -> TacZAdditionsConfig.COMMON.recoilRPGVertical.get().floatValue();
+            case MG -> TacZAdditionsConfig.COMMON.recoilMGVertical.get().floatValue();
         };
     }
 
     private float getHorizontalMultiplier(GunTabType type) {
         return switch (type) {
-            case PISTOL -> TacZAdditionsConfig.SERVER.recoilPistolHorizontal.get().floatValue();
-            case RIFLE -> TacZAdditionsConfig.SERVER.recoilRifleHorizontal.get().floatValue();
-            case SNIPER -> TacZAdditionsConfig.SERVER.recoilSniperHorizontal.get().floatValue();
-            case SMG -> TacZAdditionsConfig.SERVER.recoilSMGHorizontal.get().floatValue();
-            case SHOTGUN -> TacZAdditionsConfig.SERVER.recoilShotgunHorizontal.get().floatValue();
-            case RPG -> TacZAdditionsConfig.SERVER.recoilRPGHorizontal.get().floatValue();
-            case MG -> TacZAdditionsConfig.SERVER.recoilMGHorizontal.get().floatValue();
+            case PISTOL -> TacZAdditionsConfig.COMMON.recoilPistolHorizontal.get().floatValue();
+            case RIFLE -> TacZAdditionsConfig.COMMON.recoilRifleHorizontal.get().floatValue();
+            case SNIPER -> TacZAdditionsConfig.COMMON.recoilSniperHorizontal.get().floatValue();
+            case SMG -> TacZAdditionsConfig.COMMON.recoilSMGHorizontal.get().floatValue();
+            case SHOTGUN -> TacZAdditionsConfig.COMMON.recoilShotgunHorizontal.get().floatValue();
+            case RPG -> TacZAdditionsConfig.COMMON.recoilRPGHorizontal.get().floatValue();
+            case MG -> TacZAdditionsConfig.COMMON.recoilMGHorizontal.get().floatValue();
         };
     }
 }

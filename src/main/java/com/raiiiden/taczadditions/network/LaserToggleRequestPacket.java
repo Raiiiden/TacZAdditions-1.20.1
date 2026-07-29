@@ -27,7 +27,7 @@ public final class LaserToggleRequestPacket {
             if (player == null) return;
 
             ModNetworking.sendLaserToggleConfig(player);
-            if (!TacZAdditionsConfig.SERVER.enableLaserToggle.get()) return;
+            if (!TacZAdditionsConfig.COMMON.enableLaserToggle.get()) return;
 
             ItemStack gunStack = player.getMainHandItem();
             if (!LaserToggleData.hasLaser(gunStack)) return;
@@ -42,9 +42,6 @@ public final class LaserToggleRequestPacket {
                     ModSounds.LASER_CLICK.get(), SoundSource.PLAYERS,
                     0.7f, 1.0f
             );
-//            player.displayClientMessage(Component.translatable(
-//                    enabled ? "message.taczadditions.laser_on" : "message.taczadditions.laser_off"
-//            ), true);
         });
         context.setPacketHandled(true);
     }

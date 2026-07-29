@@ -1,6 +1,7 @@
 package com.raiiiden.taczadditions.network;
 
 import net.minecraft.resources.ResourceLocation;
+import net.minecraft.server.level.ServerLevel;
 import net.minecraft.server.level.ServerPlayer;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.phys.Vec3;
@@ -13,7 +14,7 @@ import net.minecraftforge.network.simple.SimpleChannel;
 import java.util.Optional;
 
 public class ModNetworking {
-    private static final String PROTOCOL_VERSION = "1.1";
+    private static final String PROTOCOL_VERSION = "1.3";
 
     public static final SimpleChannel CHANNEL = NetworkRegistry.newSimpleChannel(
             new ResourceLocation("taczadditions", "network"),
@@ -58,6 +59,14 @@ public class ModNetworking {
         );
         CHANNEL.registerMessage(
                 id++,
+                ConfigSnapshotPacket.class,
+                ConfigSnapshotPacket::encode,
+                ConfigSnapshotPacket::decode,
+                ConfigSnapshotPacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_CLIENT)
+        );
+        CHANNEL.registerMessage(
+                id++,
                 LaserToggleConfigPacket.class,
                 LaserToggleConfigPacket::encode,
                 LaserToggleConfigPacket::decode,
@@ -66,14 +75,17 @@ public class ModNetworking {
         );
     }
 
-    // Sends muzzle-flash packets only to clients that expose this optional channel.
-    public static void sendMuzzleFlash(LivingEntity shooter, int lightLevel) {
-        if (!(shooter instanceof ServerPlayer serverPlayer)) return;
-        if (serverPlayer.getServer() == null) return;
+    // Dynamic lights fade out well within this range, so viewers further away gain nothing.
+    private static final double MUZZLE_FLASH_VIEW_RANGE_SQR = 128.0 * 128.0;
 
-        MuzzleFlashPacket packet = new MuzzleFlashPacket(shooter.getId(), lightLevel);
-        for (ServerPlayer player : serverPlayer.getServer().getPlayerList().getPlayers()) {
-            if (player.level() == shooter.level()) sendToPlayerIfPresent(player, packet);
+    // Sends nearby living-shooter flashes only through available client channels.
+    public static void sendMuzzleFlash(LivingEntity shooter, int lightLevel, int color) {
+        if (!(shooter.level() instanceof ServerLevel serverLevel)) return;
+
+        MuzzleFlashPacket packet = new MuzzleFlashPacket(shooter.getId(), lightLevel, color);
+        for (ServerPlayer player : serverLevel.players()) {
+            if (player.distanceToSqr(shooter) > MUZZLE_FLASH_VIEW_RANGE_SQR) continue;
+            sendToPlayerIfPresent(player, packet);
         }
     }
 
@@ -85,9 +97,14 @@ public class ModNetworking {
         CHANNEL.sendToServer(new LaserToggleRequestPacket());
     }
 
+    // Locks the joining player's gun handling to this server's common config for the session.
+    public static void sendConfigSnapshot(ServerPlayer player) {
+        sendToPlayerIfPresent(player, ConfigSnapshotPacket.ofLocalValues());
+    }
+
     public static void sendLaserToggleConfig(ServerPlayer player) {
         sendToPlayerIfPresent(player,
-                new LaserToggleConfigPacket(TacZAdditionsConfig.SERVER.enableLaserToggle.get()));
+                new LaserToggleConfigPacket(TacZAdditionsConfig.COMMON.enableLaserToggle.get()));
     }
 
     public static void relayLaserDot(ServerPlayer sender, double x, double y, double z, int color) {

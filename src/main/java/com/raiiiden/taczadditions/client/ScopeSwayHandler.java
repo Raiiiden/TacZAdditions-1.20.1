@@ -25,7 +25,7 @@ public class ScopeSwayHandler {
 
     @SubscribeEvent(priority = EventPriority.LOW)
     public static void onComputeCameraAngles(ViewportEvent.ComputeCameraAngles event) {
-        if (!TacZAdditionsConfig.CLIENT.enableScopeSway.get()) return;
+        if (!TacZAdditionsConfig.COMMON.enableScopeSway.get()) return;
 
         LocalPlayer player = Minecraft.getInstance().player;
         if (player == null) return;
@@ -34,7 +34,7 @@ public class ScopeSwayHandler {
         if (!(main.getItem() instanceof IGun iGun)) return;
 
         float zoom = iGun.getAimingZoom(main);
-        float minZoom = TacZAdditionsConfig.CLIENT.scopeSwayMinZoom.get().floatValue();
+        float minZoom = TacZAdditionsConfig.COMMON.scopeSwayMinZoom.get().floatValue();
         if (zoom < minZoom) return;
 
         IClientPlayerGunOperator op = IClientPlayerGunOperator.fromLocalPlayer(player);
@@ -44,16 +44,15 @@ public class ScopeSwayHandler {
 
         // Reset crouchStartTime when player stops aiming (unscopes)
         if (!isAiming && wasAiming) {
-            // Player just unscoped, but don't reset crouchStartTime or cooldown
-            // This prevents cheating by unscoping and rescoping
+            // Preserve crouch timing across scope toggles.
         }
 
         wasAiming = isAiming;
 
         if (!isAiming) return;
 
-        float baseStrength = TacZAdditionsConfig.CLIENT.scopeSwayStrength.get().floatValue();
-        float baseSpeed = TacZAdditionsConfig.CLIENT.scopeSwaySpeed.get().floatValue();
+        float baseStrength = TacZAdditionsConfig.COMMON.scopeSwayStrength.get().floatValue();
+        float baseSpeed = TacZAdditionsConfig.COMMON.scopeSwaySpeed.get().floatValue();
 
         float delta = Minecraft.getInstance().getDeltaFrameTime();
         swayTimer += delta;
@@ -64,12 +63,12 @@ public class ScopeSwayHandler {
         float swayMult = 1f;
         float speedMult = 1f;
 
-        long stabilizeMs = TacZAdditionsConfig.CLIENT.crouchStabilizeTime.get().longValue();
-        long sporadicMs = TacZAdditionsConfig.CLIENT.crouchSporadicTime.get().longValue();
-        long cooldownMs = TacZAdditionsConfig.CLIENT.crouchCooldownTime.get().longValue();
+        long stabilizeMs = TacZAdditionsConfig.COMMON.crouchStabilizeTime.get().longValue();
+        long sporadicMs = TacZAdditionsConfig.COMMON.crouchSporadicTime.get().longValue();
+        long cooldownMs = TacZAdditionsConfig.COMMON.crouchCooldownTime.get().longValue();
 
-        double sporadicStrength = TacZAdditionsConfig.CLIENT.sporadicSwayStrength.get();
-        double sporadicSpeed = TacZAdditionsConfig.CLIENT.sporadicSwaySpeed.get();
+        double sporadicStrength = TacZAdditionsConfig.COMMON.sporadicSwayStrength.get();
+        double sporadicSpeed = TacZAdditionsConfig.COMMON.sporadicSwaySpeed.get();
 
         // Check if we're in cooldown period
         if (now < crouchCooldownEnd) {
