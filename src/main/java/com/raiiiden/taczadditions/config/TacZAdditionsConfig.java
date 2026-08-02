@@ -52,6 +52,9 @@ public class TacZAdditionsConfig {
         public final SyncedValue<Boolean> blockFireWhenTucked;
         public final SyncedValue<Double> tuckFireBlockThreshold;
 
+        // Aiming
+        public final SyncedValue<Boolean> disableAimingWhileAirborne;
+
         // Scope sway
         public final SyncedValue<Boolean> enableScopeSway;
         public final SyncedValue<Double> scopeSwayStrength;
@@ -199,6 +202,15 @@ public class TacZAdditionsConfig {
                     .comment("Tuck amount (0 = not tucked, 1 = fully tucked) at which firing is blocked.",
                             "1.0 is never reached in practice, so it effectively disables the block.")
                     .defineInRange("tuckFireBlockThreshold", 0.5, 0.05, 1.0));
+            builder.pop();
+
+            builder.push("aiming");
+            disableAimingWhileAirborne = ConfigSync.bool("aiming.disableAimingWhileAirborne", builder
+                    .comment(
+                            "If true, jumping drops the player out of aim and aiming cannot be started mid-air.",
+                            "Ladders, water, vehicles, elytra flight and creative flight are not treated as airborne.",
+                            "With hold-to-aim the player re-aims automatically on landing if the key is still held.")
+                    .define("disableAimingWhileAirborne", false));
             builder.pop();
 
             builder.push("scopeSway");

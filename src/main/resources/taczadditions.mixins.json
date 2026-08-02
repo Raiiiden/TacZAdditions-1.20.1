@@ -22,6 +22,7 @@
     "NoRecoilRecoveryMixin",
     "GunFireMixin",
     "GunDisplaySilenceSoundFallbackMixin",
+    "LocalPlayerAimMixin",
     "SodiumSelfLuminanceMixin",
     "ColorfulLightingDynamicLightsMixin",
     "MuzzleDirectionMixin"
