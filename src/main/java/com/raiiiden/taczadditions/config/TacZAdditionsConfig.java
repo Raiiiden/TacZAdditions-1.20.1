@@ -34,6 +34,9 @@ public class TacZAdditionsConfig {
         public final SyncedValue<List<? extends String>> silencedGunIds;
         public final SyncedValue<List<? extends String>> coloredMuzzleFlashGunColors;
         public final SyncedValue<Double> laserDotMaxDistance;
+        public final SyncedValue<Boolean> laserPassThroughNonCollidingBlocks;
+        public final SyncedValue<List<? extends String>> laserPassThroughBlocks;
+        public final SyncedValue<List<? extends String>> laserBlockingBlocks;
         public final SyncedValue<Boolean> enableLaserToggle;
 
         public final SyncedValue<Boolean> forceBlockLightForFastGuns;
@@ -106,6 +109,7 @@ public class TacZAdditionsConfig {
                             "Gun IDs that TaCZ should always treat as silenced.",
                             "Use this for integrated suppressors that do not expose TaCZ's silence modifier.",
                             "This enables the gun's silenced sound and reduced muzzle-flash light.",
+                            "Guns without a silenced sound keep using their normal shot sound.",
                             "Example: \"tacz:example_integrally_suppressed_gun\".")
                     .defineListAllowEmpty(
                             "silencedGunIds",
@@ -125,6 +129,34 @@ public class TacZAdditionsConfig {
             laserDotMaxDistance = ConfigSync.dbl("laserDotMaxDistance", builder
                     .comment("Maximum ray trace distance for laser dot in blocks.")
                     .defineInRange("laserDotMaxDistance", 100.0, 1.0, 500.0));
+
+            laserPassThroughNonCollidingBlocks = ConfigSync.bool("laserPassThroughNonCollidingBlocks", builder
+                    .comment(
+                            "If true, the laser passes through blocks you can walk through, such as tall grass and flowers.",
+                            "Their selection box is far wider than the visible model, so the dot would otherwise",
+                            "hang in the empty gaps around the plant.")
+                    .define("laserPassThroughNonCollidingBlocks", true));
+
+            laserPassThroughBlocks = ConfigSync.stringList("laserPassThroughBlocks", builder
+                    .comment(
+                            "Blocks the laser passes straight through instead of stopping on.",
+                            "Accepts block IDs such as \"minecraft:glass\" and block tags prefixed with \"#\",",
+                            "for example \"#forge:glass\".")
+                    .defineListAllowEmpty(
+                            "laserPassThroughBlocks",
+                            List.of("#forge:glass", "#forge:glass_panes"),
+                            TacZAdditionsConfig::isValidBlockOrTagEntry));
+
+            laserBlockingBlocks = ConfigSync.stringList("laserBlockingBlocks", builder
+                    .comment(
+                            "Blocks that always stop the laser, overriding both settings above.",
+                            "Defaults cover snow, which has no collision at one layer, and powder snow,",
+                            "which has none at all, so the laser would otherwise pass through solid-looking snow.",
+                            "Accepts block IDs and \"#\"-prefixed block tags.")
+                    .defineListAllowEmpty(
+                            "laserBlockingBlocks",
+                            List.of("minecraft:snow", "minecraft:powder_snow"),
+                            TacZAdditionsConfig::isValidBlockOrTagEntry));
 
             enableLaserToggle = ConfigSync.bool("enableLaserToggle", builder
                     .comment("Allow players to toggle equipped laser attachments with a keybind. If false, lasers are always on.")
@@ -420,6 +452,12 @@ public class TacZAdditionsConfig {
                 net.minecraftforge.fml.config.ModConfig.Type.CLIENT, CLIENT_SPEC);
         net.minecraftforge.fml.ModLoadingContext.get().registerConfig(
                 net.minecraftforge.fml.config.ModConfig.Type.COMMON, COMMON_SPEC);
+    }
+
+    private static boolean isValidBlockOrTagEntry(Object value) {
+        if (!(value instanceof String entry)) return false;
+        String id = entry.startsWith("#") ? entry.substring(1) : entry;
+        return ResourceLocation.tryParse(id.trim()) != null;
     }
 
     private static boolean isValidGunColorEntry(Object value) {

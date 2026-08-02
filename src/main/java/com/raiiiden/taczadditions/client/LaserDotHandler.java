@@ -11,12 +11,18 @@ import com.mojang.blaze3d.vertex.PoseStack;
 import net.minecraft.client.Camera;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.renderer.MultiBufferSource;
+import net.minecraft.core.BlockPos;
+import net.minecraft.core.Direction;
 import net.minecraft.util.Mth;
 import net.minecraft.world.entity.Entity;
 import net.minecraft.world.entity.LivingEntity;
 import net.minecraft.world.item.ItemStack;
 import net.minecraft.world.phys.*;
+import net.minecraft.world.phys.shapes.VoxelShape;
+import net.minecraft.world.level.BlockGetter;
 import net.minecraft.world.level.ClipContext;
+import net.minecraft.world.level.Level;
+import net.minecraft.world.level.block.state.BlockState;
 import net.minecraftforge.api.distmarker.Dist;
 import net.minecraftforge.client.event.RenderLevelStageEvent;
 import net.minecraftforge.client.event.RenderLivingEvent;
@@ -30,6 +36,11 @@ import java.util.function.Predicate;
 
 @Mod.EventBusSubscriber(modid = "taczadditions", value = Dist.CLIENT)
 public class LaserDotHandler {
+    private static final ConfiguredBlockSet PASS_THROUGH_BLOCKS =
+            new ConfiguredBlockSet(() -> TacZAdditionsConfig.COMMON.laserPassThroughBlocks.get());
+    private static final ConfiguredBlockSet BLOCKING_BLOCKS =
+            new ConfiguredBlockSet(() -> TacZAdditionsConfig.COMMON.laserBlockingBlocks.get());
+
     private static final double BLOCK_SURFACE_OFFSET = 0.002;
     // Entity boxes sit outside the model, so push further out than a block face needs.
     private static final double ENTITY_SURFACE_OFFSET = 0.01;
@@ -41,6 +52,9 @@ public class LaserDotHandler {
             RemoteLaserDots.clear();
             LaserVisibilityCache.clear();
             MuzzleCache.clear();
+            // Tag lookups are level-bound, so the resolved sets must not outlive the level.
+            PASS_THROUGH_BLOCKS.clear();
+            BLOCKING_BLOCKS.clear();
         }
     }
 
@@ -233,14 +247,41 @@ public class LaserDotHandler {
     }
 
     private static BlockHitResult clipBlocks(Entity shooter, Vec3 start, Vec3 end) {
-        // OUTLINE stops lasers on visible non-collidable block geometry.
-        return shooter.level().clip(new ClipContext(
+        Level level = shooter.level();
+        // OUTLINE keeps the dot on visible geometry, but Level#clip cannot skip individual blocks,
+        // so the traversal is driven here to let configured blocks pass through.
+        ClipContext context = new ClipContext(
                 start,
                 end,
                 ClipContext.Block.OUTLINE,
                 ClipContext.Fluid.NONE,
                 shooter
-        ));
+        );
+
+        return BlockGetter.traverseBlocks(start, end, context, (ctx, pos) -> {
+            BlockState state = level.getBlockState(pos);
+            if (isLaserPassThrough(level, pos, state)) return null;
+
+            VoxelShape shape = ctx.getBlockShape(state, level, pos);
+            return level.clipWithInteractionOverride(ctx.getFrom(), ctx.getTo(), pos, shape, state);
+        }, ctx -> {
+            Vec3 delta = ctx.getFrom().subtract(ctx.getTo());
+            return BlockHitResult.miss(ctx.getTo(),
+                    Direction.getNearest(delta.x, delta.y, delta.z),
+                    BlockPos.containing(ctx.getTo()));
+        });
+    }
+
+    private static boolean isLaserPassThrough(Level level, BlockPos pos, BlockState state) {
+        if (state.isAir()) return true;
+        // An explicit blocking entry wins over every pass-through rule below.
+        if (BLOCKING_BLOCKS.matches(state)) return false;
+        if (PASS_THROUGH_BLOCKS.matches(state)) return true;
+
+        // Grass and flowers have a selection box far wider than their cross-shaped model, so the
+        // dot would land in the empty air around the plant.
+        return TacZAdditionsConfig.COMMON.laserPassThroughNonCollidingBlocks.get()
+                && state.getCollisionShape(level, pos).isEmpty();
     }
 
     private static BlockHitResult resolveInsideBlockHit(Entity shooter, Vec3 start, Vec3 end,

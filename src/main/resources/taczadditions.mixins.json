@@ -21,6 +21,7 @@
     "MagazineTextOverlayMixin",
     "NoRecoilRecoveryMixin",
     "GunFireMixin",
+    "GunDisplaySilenceSoundFallbackMixin",
     "SodiumSelfLuminanceMixin",
     "ColorfulLightingDynamicLightsMixin",
     "MuzzleDirectionMixin"
