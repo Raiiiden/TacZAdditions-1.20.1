@@ -25,7 +25,11 @@
     "LocalPlayerAimMixin",
     "SodiumSelfLuminanceMixin",
     "ColorfulLightingDynamicLightsMixin",
-    "MuzzleDirectionMixin"
+    "MuzzleDirectionMixin",
+    "VariableZoomFovMixin",
+    "ZoomKeyMixin",
+    "ClientAttachmentIndexZoomMixin",
+    "LeftHandReachMixin"
   ],
   "minVersion": "0.8.5"
 }

@@ -55,6 +55,14 @@ public class TacZAdditionsConfig {
         // Aiming
         public final SyncedValue<Boolean> disableAimingWhileAirborne;
 
+        // Variable scope zoom
+        public final SyncedValue<Boolean> enableVariableZoom;
+        public final SyncedValue<Boolean> variableZoomLockHotbarScroll;
+        public final SyncedValue<Boolean> variableZoomAllowBuiltInScopes;
+        public final SyncedValue<Double> variableZoomMaxMagnification;
+        public final SyncedValue<List<? extends String>> variableZoomForceVariableScopes;
+        public final SyncedValue<List<? extends String>> variableZoomForceFixedScopes;
+
         // Scope sway
         public final SyncedValue<Boolean> enableScopeSway;
         public final SyncedValue<Double> scopeSwayStrength;
@@ -213,6 +221,48 @@ public class TacZAdditionsConfig {
                     .define("disableAimingWhileAirborne", false));
             builder.pop();
 
+            builder.push("variableZoom");
+            enableVariableZoom = ConfigSync.bool("variableZoom.enabled", builder
+                    .comment(
+                            "Let scopes with several zoom levels be swept smoothly with the scroll wheel while aiming,",
+                            "instead of only toggling between the levels with the zoom key.",
+                            "Each authored level acts as a soft detent that briefly resists but can be scrolled past.")
+                    .define("enabled", true));
+            variableZoomLockHotbarScroll = ConfigSync.bool("variableZoom.lockHotbarScroll", builder
+                    .comment(
+                            "While aiming a variable scope, the scroll wheel changes magnification instead of the hotbar slot.",
+                            "If false, magnification can only be changed with the zoom key.",
+                            "Fixed scopes, iron sights and hip fire always keep normal hotbar scrolling.")
+                    .define("lockHotbarScroll", true));
+            variableZoomAllowBuiltInScopes = ConfigSync.bool("variableZoom.allowBuiltInScopes", builder
+                    .comment(
+                            "Also apply variable zoom to guns whose scope is built into the gun rather than attached.",
+                            "TaCZ pins those to their first zoom level and its zoom key does nothing on them,",
+                            "so this makes integrated variable optics usable. Set false for stock TaCZ behaviour.")
+                    .define("allowBuiltInScopes", true));
+            variableZoomMaxMagnification = ConfigSync.dbl("variableZoom.maxMagnification", builder
+                    .comment("Upper limit on magnification, whatever a scope asks for. Raise it to disable the cap.")
+                    .defineInRange("maxMagnification", 50.0, 1.0, 100.0));
+            variableZoomForceVariableScopes = ConfigSync.stringList("variableZoom.forceVariableScopes", builder
+                    .comment(
+                            "Scope IDs to always treat as one continuous range, merging every zoom level they define.",
+                            "Use this when a pack authors a real variable optic without marking its levels as one sight.",
+                            "Example: \"tacz:scope_lpvo_1_6\".")
+                    .defineListAllowEmpty(
+                            "forceVariableScopes",
+                            List.of("example:scope_id"),
+                            value -> value instanceof String id && ResourceLocation.tryParse(id) != null));
+            variableZoomForceFixedScopes = ConfigSync.stringList("variableZoom.forceFixedScopes", builder
+                    .comment(
+                            "Scope IDs to never sweep, keeping every zoom level a separate step.",
+                            "Use this for optics that switch between fixed settings rather than zooming, such as a 1x/4x switch.",
+                            "Example: \"tacz:scope_elcan_4x\".")
+                    .defineListAllowEmpty(
+                            "forceFixedScopes",
+                            List.of("example:scope_id"),
+                            value -> value instanceof String id && ResourceLocation.tryParse(id) != null));
+            builder.pop();
+
             builder.push("scopeSway");
             enableScopeSway = ConfigSync.bool("scopeSway.enableScopeSway", builder
                     .comment("Enable subtle camera sway when aiming with high-magnification scopes (4x+)")
@@ -337,12 +387,101 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue rollSensitivity;
         public final ForgeConfigSpec.DoubleValue maxTiltAngle;
 
+        // Variable scope zoom feel
+        public final ForgeConfigSpec.DoubleValue variableZoomScrollSensitivity;
+        public final ForgeConfigSpec.BooleanValue variableZoomInvertScroll;
+        public final ForgeConfigSpec.DoubleValue variableZoomSmoothingSpeed;
+        public final ForgeConfigSpec.DoubleValue variableZoomDetentSnapRange;
+        public final ForgeConfigSpec.DoubleValue variableZoomDetentBreakout;
+        public final ForgeConfigSpec.BooleanValue variableZoomHandReach;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachHoldSeconds;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachSpeed;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachDamping;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachOffsetX;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachOffsetY;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachOffsetZ;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistX;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistY;
+        public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistZ;
+
         // Experimental
         public final ForgeConfigSpec.BooleanValue magazineText;
         public final ForgeConfigSpec.BooleanValue enableLaserDot;
 
         public Client(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Client Config").push("client");
+
+            builder.push("variableZoom");
+            variableZoomScrollSensitivity = builder
+                    .comment(
+                            "How much of a scope's zoom range one scroll notch covers.",
+                            "0.125 means roughly eight notches to sweep from the lowest to the highest magnification.")
+                    .defineInRange("scrollSensitivity", 0.125, 0.01, 1.0);
+            variableZoomInvertScroll = builder
+                    .comment("If true, scrolling down zooms in instead of out.")
+                    .define("invertScroll", false);
+            variableZoomSmoothingSpeed = builder
+                    .comment(
+                            "How quickly the magnification catches up to where you scrolled, per tick.",
+                            "1.0 snaps instantly. Lower values ease in more gradually.")
+                    .defineInRange("smoothingSpeed", 0.35, 0.05, 1.0);
+            variableZoomDetentSnapRange = builder
+                    .comment(
+                            "How close to one of the scope's own zoom levels the detent grabs, as a fraction of the range.",
+                            "Larger values make the levels feel wider.")
+                    .defineInRange("detentSnapRange", 0.04, 0.0, 0.5);
+            variableZoomDetentBreakout = builder
+                    .comment(
+                            "How much extra scrolling it takes to leave a zoom level, as a fraction of the range.",
+                            "This is the small lock felt at each level. 0.0 removes the detents entirely.")
+                    .defineInRange("detentBreakout", 0.1, 0.0, 1.0);
+
+            builder.push("handReach");
+            variableZoomHandReach = builder
+                    .comment("If true, the off hand reaches up to the optic while you scroll the magnification.")
+                    .define("enabled", true);
+            variableZoomHandReachHoldSeconds = builder
+                    .comment("How long the hand stays at the optic after the last scroll notch, in seconds.")
+                    .defineInRange("holdSeconds", 0.45, 0.0, 5.0);
+            variableZoomHandReachSpeed = builder
+                    .comment("How briskly the hand travels. Higher values arrive sooner.")
+                    .defineInRange("speed", 12.0, 1.0, 60.0);
+            variableZoomHandReachDamping = builder
+                    .comment(
+                            "How much the travel is damped. 1.0 settles without overshooting,",
+                            "lower values let the hand overshoot slightly before it settles.")
+                    .defineInRange("damping", 0.8, 0.1, 2.0);
+            variableZoomHandReachOffsetX = builder
+                    .comment(
+                            "How far the hand travels to reach the optic, in model pixels (1/16 of a block).",
+                            "X is sideways travel. Zero keeps the hand on its own line up the gun, which is",
+                            "normally right, since the support hand already sits under the optic.")
+                    .defineInRange("offsetX", 0.0, -32.0, 32.0);
+            variableZoomHandReachOffsetY = builder
+                    .comment(
+                            "Y is vertical, positive is up. The arm is anchored around its middle, so this sits",
+                            "below the optic to bring the top of the arm up against it rather than its centre.")
+                    .defineInRange("offsetY", -6.0, -32.0, 32.0);
+            variableZoomHandReachOffsetZ = builder
+                    .comment(
+                            "Z runs along the gun, positive is back toward you where the magnification ring sits.",
+                            "This adds to the travel the two bones already imply, which is itself backwards.")
+                    .defineInRange("offsetZ", 10.0, -32.0, 32.0);
+            variableZoomHandReachTwistX = builder
+                    .comment(
+                            "How far the arm is turned once it arrives, in degrees, pivoting about the hand.",
+                            "X pitches the far end of the arm up and down.")
+                    .defineInRange("twistX", 0.0, -180.0, 180.0);
+            variableZoomHandReachTwistY = builder
+                    .comment(
+                            "Y swings the far end of the arm sideways. The elbow sits back and to your left,",
+                            "so negative carries it away from the gun and positive drives it into the centre.")
+                    .defineInRange("twistY", -25.0, -180.0, 180.0);
+            variableZoomHandReachTwistZ = builder
+                    .comment("Z rolls the arm about its own length.")
+                    .defineInRange("twistZ", 0.0, -180.0, 180.0);
+            builder.pop();
+            builder.pop();
 
             enableGunMovement = builder
                     .comment("If false, disables all gun movement (sway, roll, etc).")
