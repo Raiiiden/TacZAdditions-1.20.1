@@ -173,9 +173,8 @@ public class LaserDotHandler {
     private static boolean shouldUseAnimatedGunAngle(Minecraft mc, float partialTick) {
         if (!mc.options.getCameraType().isFirstPerson()) return false;
 
-        // The item-FOV projection applies to every hip-fire first-person pose, not just the
-        // animations that hide the crosshair (TaCZ only sets that flag for inspect). While
-        // aiming the gun is rendered under the world FOV, so no correction is wanted there.
+        // The item-FOV projection applies to every hip-fire pose, not just the animations that
+        // hide the crosshair. Aiming renders under the world FOV, so no correction is wanted.
         float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(mc.player)
                 .getClientAimingProgress(partialTick);
         return aimingProgress <= 1.0e-3F;

@@ -16,14 +16,8 @@ import net.minecraft.resources.ResourceLocation;
 import net.minecraft.util.Mth;
 import net.minecraft.world.item.ItemStack;
 
-// Continuous scope magnification driven by the scroll wheel.
-//
-// TaCZ only ever exposes the discrete levels a scope authored. This keeps a float magnification for
-// the sight the player is currently looking through and hands it to the FOV hooks in
-// VariableZoomFovMixin, so a 1-6x optic sweeps its whole range instead of toggling between the ends.
-//
-// The value lives on the client only. ZoomNumber is never written from here, which leaves the
-// reticle selection, the server-side attachment NBT and TaCZ own V-key cycling untouched.
+// Continuous scope magnification driven by the scroll wheel, kept on the client alone.
+// TaCZ exposes only the discrete authored levels; this keeps a float one for the FOV hooks.
 public final class VariableZoomState {
 
     // Magnification is multiplicative, so all stepping happens in log space: 1x to 2x should cost
@@ -313,12 +307,7 @@ public final class VariableZoomState {
     private static final float[] ZOOM_OVERRIDE = new float[1];
 
     // The zoom array TaCZ should see for this index, or null to leave its authored one alone.
-    //
-    // Publishing the magnification here rather than at each use site is what keeps the view and the
-    // aim sensitivity agreed: TaCZ derives sensitivity in its own MouseHandler mixin straight from
-    // getZoom(), never through getAimingZoom, so overriding only the FOV would leave the mouse
-    // scaled for whichever discrete level the ZoomNumber tag happens to point at. A single-element
-    // array also collapses every "zoomNumber % length" lookup onto our value.
+    // Publishing here keeps view and sensitivity agreed, since TaCZ derives both from getZoom().
     public static float[] zoomArrayOverride(ClientAttachmentIndex index) {
         // The band builder reads the authored array through this very getter.
         if (ScopeZoomBands.isResolving()) return null;
@@ -348,8 +337,7 @@ public final class VariableZoomState {
     }
 
     // The magnification gameplay should react to: the swept value while this system owns the held
-    // scope, otherwise the discrete level TaCZ resolved. Callers pass their own getAimingZoom result
-    // so a gun we are not tracking keeps behaving exactly as before.
+    // scope, otherwise the caller's own result, so a gun we are not tracking behaves as before.
     public static float effectiveMagnification(float taczZoom) {
         float override = magnificationOverride(scopeId);
         return Float.isNaN(override) ? taczZoom : override;

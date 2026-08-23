@@ -14,9 +14,7 @@ import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfo;
 
 // Lets the off hand travel to the optic while the magnification is being scrolled.
-//
-// The pose handed to this renderer is already at the lefthand_pos bone, and FunctionalBedrockPart
-// pushed it before the call and pops it afterwards, so translating here moves only the arm.
+// The pose is already at lefthand_pos and pushed by the caller, so this moves only the arm.
 @Mixin(value = LeftHandRender.class, remap = false)
 public class LeftHandReachMixin {
 

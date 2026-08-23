@@ -20,7 +20,11 @@ build
 # other
 run
 logs
-libs
+libs/*
+# The Iris packagings the picture-in-picture scope compiles against. Kept in the tree because the
+# build cannot resolve them anywhere else.
+!libs/oculus-mc1.20.1-1.7.0.jar
+!libs/oculus_legacy-mc1.20.1-1.6.13.jar
 
 # Files from Forge MDK
 forge*changelog.txt

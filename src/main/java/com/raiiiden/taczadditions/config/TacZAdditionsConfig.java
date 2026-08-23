@@ -1,5 +1,6 @@
 package com.raiiiden.taczadditions.config;
 
+import com.raiiiden.taczadditions.pip.PipScopeMode;
 import net.minecraftforge.common.ForgeConfigSpec;
 import net.minecraft.resources.ResourceLocation;
 import org.apache.commons.lang3.tuple.Pair;
@@ -55,6 +56,11 @@ public class TacZAdditionsConfig {
         // Aiming
         public final SyncedValue<Boolean> disableAimingWhileAirborne;
 
+        // Free aim
+        public final SyncedValue<Boolean> enableFreeAim;
+        public final SyncedValue<Boolean> freeAimAffectsBulletAngle;
+        public final SyncedValue<Double> freeAimMaxBulletAngle;
+
         // Variable scope zoom
         public final SyncedValue<Boolean> enableVariableZoom;
         public final SyncedValue<Boolean> variableZoomLockHotbarScroll;
@@ -62,6 +68,9 @@ public class TacZAdditionsConfig {
         public final SyncedValue<Double> variableZoomMaxMagnification;
         public final SyncedValue<List<? extends String>> variableZoomForceVariableScopes;
         public final SyncedValue<List<? extends String>> variableZoomForceFixedScopes;
+
+        // Picture-in-picture scopes
+        public final SyncedValue<Boolean> enablePipScope;
 
         // Scope sway
         public final SyncedValue<Boolean> enableScopeSway;
@@ -263,6 +272,41 @@ public class TacZAdditionsConfig {
                             value -> value instanceof String id && ResourceLocation.tryParse(id) != null));
             builder.pop();
 
+            builder.push("freeAim");
+            enableFreeAim = ConfigSync.bool("freeAim.enabled", builder
+                    .comment(
+                            "Allow players to decouple the gun from the camera, so the weapon drifts inside the view",
+                            "instead of being welded to the centre of the screen.",
+                            "Each player still tunes the feel in their own client config; this only decides whether",
+                            "the server permits it. Set false to force every connected player back to a locked gun.")
+                    .define("enabled", true));
+            freeAimAffectsBulletAngle = ConfigSync.bool("freeAim.affectsBulletAngle", builder
+                    .comment(
+                            "If true, shots leave along the barrel the player is looking at rather than along their",
+                            "crosshair, the way gun tuck bends its own shots.",
+                            "Unlike gun tuck the server cannot work this angle out for itself, so each client reports",
+                            "it and the server clamps what it is told to the limit below.",
+                            "Set false to keep free aim a first person visual, with every shot on the crosshair.")
+                    .define("affectsBulletAngle", true));
+            freeAimMaxBulletAngle = ConfigSync.dbl("freeAim.maxBulletAngle", builder
+                    .comment(
+                            "Largest reported offset in degrees the server will fire along, on either axis.",
+                            "This is the cap on what a client can claim, so keep it near the largest maxYaw or",
+                            "maxPitch players are expected to run rather than far above it.")
+                    .defineInRange("maxBulletAngle", 20.0, 0.0, 60.0));
+            builder.pop();
+
+            builder.push("pipScope");
+            enablePipScope = ConfigSync.bool("pipScope.enabled", builder
+                    .comment(
+                            "Allow players to render scopes picture-in-picture, so the lens shows its own magnified",
+                            "image instead of the whole screen zooming in.",
+                            "Each player still picks the mode in their own client config; this only decides whether",
+                            "the server permits it at all. Set false to force every connected player back to the",
+                            "stock full-screen zoom.")
+                    .define("enabled", true));
+            builder.pop();
+
             builder.push("scopeSway");
             enableScopeSway = ConfigSync.bool("scopeSway.enableScopeSway", builder
                     .comment("Enable subtle camera sway when aiming with high-magnification scopes (4x+)")
@@ -403,6 +447,34 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistX;
         public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistY;
         public final ForgeConfigSpec.DoubleValue variableZoomHandReachTwistZ;
+
+        // Free / decoupled aim
+        public final ForgeConfigSpec.BooleanValue freeAimEnabled;
+        public final ForgeConfigSpec.DoubleValue freeAimStrength;
+        public final ForgeConfigSpec.DoubleValue freeAimCameraAbsorb;
+        public final ForgeConfigSpec.DoubleValue freeAimLag;
+        public final ForgeConfigSpec.DoubleValue freeAimDeadzoneYaw;
+        public final ForgeConfigSpec.DoubleValue freeAimDeadzonePitch;
+        public final ForgeConfigSpec.DoubleValue freeAimMaxYaw;
+        public final ForgeConfigSpec.DoubleValue freeAimMaxPitch;
+        public final ForgeConfigSpec.DoubleValue freeAimDeadzoneReturn;
+        public final ForgeConfigSpec.DoubleValue freeAimEdgeReturn;
+        public final ForgeConfigSpec.DoubleValue freeAimSmoothing;
+        public final ForgeConfigSpec.BooleanValue freeAimAffectAiming;
+        public final ForgeConfigSpec.DoubleValue freeAimRollCoupling;
+        public final ForgeConfigSpec.DoubleValue freeAimMaxRoll;
+        public final ForgeConfigSpec.DoubleValue freeAimTranslate;
+        public final ForgeConfigSpec.DoubleValue freeAimFireKick;
+        public final ForgeConfigSpec.DoubleValue freeAimFireKickSpread;
+        public final ForgeConfigSpec.DoubleValue freeAimMoveInfluence;
+        public final ForgeConfigSpec.DoubleValue freeAimFallInfluence;
+
+        // Picture-in-picture scopes
+        public final ForgeConfigSpec.EnumValue<PipScopeMode> pipScopeMode;
+        public final ForgeConfigSpec.DoubleValue pipScopeResolutionScale;
+        public final ForgeConfigSpec.BooleanValue pipScopeRefreshEveryFrame;
+        public final ForgeConfigSpec.DoubleValue pipScopeRealMinMagnification;
+        public final ForgeConfigSpec.BooleanValue pipScopeFakeSmoothSampling;
 
         // Experimental
         public final ForgeConfigSpec.BooleanValue magazineText;
@@ -584,6 +656,159 @@ public class TacZAdditionsConfig {
                     .comment("Maximum roll angle (degrees).")
                     .defineInRange("maxTiltAngle", 20.0, 0.0, 180.0);
 
+            builder.pop();
+
+            builder.push("freeAim");
+            freeAimEnabled = builder
+                    .comment(
+                            "If true, the gun is no longer welded to the centre of the screen. Small mouse",
+                            "movements mostly aim the weapon inside a deadzone, with the camera following at a",
+                            "reduced speed until the gun reaches the edge and pushes it along at full speed.",
+                            "Where the shots go depends on the server: with affectsBulletAngle on they follow the",
+                            "barrel rather than the crosshair. The server must also allow it in the common config.",
+                            "The tuning below is deliberately heavy, roughly a body cam. Halve cameraAbsorb, lag",
+                            "and the movement values for something slight.")
+                    .define("enabled", false);
+            freeAimStrength = builder
+                    .comment(
+                            "Overall amount of the effect, scaling every offset below at once.",
+                            "0.0 is off, 1.0 is the tuning below as written, higher exaggerates it.")
+                    .defineInRange("strength", 1.0, 0.0, 5.0);
+            freeAimCameraAbsorb = builder
+                    .comment(
+                            "How much of the mouse moves the gun instead of the camera while the gun is still inside",
+                            "the deadzone. This is what makes it free aim rather than a gun that lags behind you.",
+                            "1.0 leaves the view completely still in there, so the weapon is what you are steering,",
+                            "and the camera is only pushed along once the gun reaches the deadzone edge.",
+                            "0.5 still turns the camera, at half speed, so the gun leads it instead of replacing it.",
+                            "0.0 turns the camera exactly as vanilla does and leaves only the trailing below.")
+                    .defineInRange("cameraAbsorb", 0.5, 0.0, 1.0);
+            freeAimLag = builder
+                    .comment(
+                            "How much of each camera turn the gun fails to follow, which drags it the other way.",
+                            "This only bites while the camera is actually turning, so with cameraAbsorb at 1.0 it is",
+                            "what pulls the weapon back toward centre as you swing past the deadzone.",
+                            "0.0 keeps the gun wherever you aimed it, 1.0 makes a fast turn shove it hard.")
+                    .defineInRange("lag", 0.35, 0.0, 1.0);
+            freeAimDeadzoneYaw = builder
+                    .comment(
+                            "Half-width of the horizontal deadzone in degrees: how far the gun may drift sideways",
+                            "before the strong edge return takes over. Inside it only the weak centring pull applies.")
+                    .defineInRange("deadzoneYaw", 12.0, 0.0, 45.0);
+            freeAimDeadzonePitch = builder
+                    .comment("Half-height of the vertical deadzone in degrees.")
+                    .defineInRange("deadzonePitch", 4.5, 0.0, 45.0);
+            freeAimMaxYaw = builder
+                    .comment(
+                            "Hard horizontal limit in degrees. The gun never swings past this no matter how fast you",
+                            "turn. Values below the deadzone are raised to it.")
+                    .defineInRange("maxYaw", 18.0, 0.0, 60.0);
+            freeAimMaxPitch = builder
+                    .comment("Hard vertical limit in degrees.")
+                    .defineInRange("maxPitch", 13.0, 0.0, 60.0);
+            freeAimDeadzoneReturn = builder
+                    .comment(
+                            "How quickly the gun creeps back to centre while it is still inside the deadzone, as a",
+                            "rate per second: 1.0 closes most of the gap in a second, 5.0 in a fifth of one.",
+                            "0.0 is true free aim, leaving it wherever it drifted until you push it to the edge.")
+                    .defineInRange("deadzoneReturn", 0.0, 0.0, 30.0);
+            freeAimEdgeReturn = builder
+                    .comment(
+                            "How quickly the part of the swing past the deadzone is reeled in, per second.",
+                            "This is the weight of the gun: 2.0 is a heavy body cam drag, 8.0 and up snaps back",
+                            "against the deadzone edge almost as fast as you can turn.")
+                    .defineInRange("edgeReturn", 2.5, 0.0, 30.0);
+            freeAimSmoothing = builder
+                    .comment(
+                            "How closely the drawn gun tracks the swing it is chasing, per second.",
+                            "Nothing here overshoots, so this only softens the once-a-tick shoves from movement",
+                            "and firing. Lower is heavier and more floaty, higher is more immediate.")
+                    .defineInRange("smoothing", 14.0, 1.0, 60.0);
+            freeAimAffectAiming = builder
+                    .comment(
+                            "Whether aiming down sights gets free aim at all.",
+                            "False fades it out as the sights come up, so a scoped shot lands on the reticle.",
+                            "True keeps the full hipfire swing while aimed, which makes a scope hard to hold on",
+                            "target and puts the shot along the barrel rather than under the reticle.")
+                    .define("affectAiming", false);
+            freeAimRollCoupling = builder
+                    .comment(
+                            "How much horizontal drift also rolls the gun about its own length, in degrees per",
+                            "degree of drift. Negative values roll the other way.")
+                    .defineInRange("rollCoupling", 0.2, -3.0, 3.0);
+            freeAimMaxRoll = builder
+                    .comment("Maximum roll from the coupling above, in degrees.")
+                    .defineInRange("maxRoll", 12.0, 0.0, 45.0);
+            freeAimTranslate = builder
+                    .comment(
+                            "How far the gun also slides across the view per degree of drift, in blocks.",
+                            "This is cosmetic and the shots do not follow it, so anything much above zero makes the",
+                            "weapon look further off target than it actually shoots. 0.0 keeps it pivoting in place.")
+                    .defineInRange("translate", 0.0, -0.05, 0.05);
+            freeAimFireKick = builder
+                    .comment(
+                            "How far each shot throws the gun off centre, in degrees.",
+                            "The catch-up above absorbs it, so a burst walks the weapon away from the crosshair and",
+                            "it drifts back between shots.")
+                    .defineInRange("fireKick", 2.5, 0.0, 20.0);
+            freeAimFireKickSpread = builder
+                    .comment("Fraction of the fire kick that goes sideways, randomly left or right.")
+                    .defineInRange("fireKickSpread", 0.8, 0.0, 2.0);
+            freeAimMoveInfluence = builder
+                    .comment(
+                            "How much starting, stopping and strafing shoves the gun, in degrees per block per",
+                            "tick of speed change. This is the body cam half of the effect.")
+                    .defineInRange("moveInfluence", 40.0, 0.0, 200.0);
+            freeAimFallInfluence = builder
+                    .comment("How much landing and falling throws the gun vertically, on the same scale.")
+                    .defineInRange("fallInfluence", 25.0, 0.0, 200.0);
+            builder.pop();
+
+            builder.push("pipScope");
+            pipScopeMode = builder
+                    .comment(
+                            "How a magnified optic shows its image.",
+                            "OFF narrows the whole screen FOV, which is what TaCZ does on its own.",
+                            "FAKE crops the frame that was already drawn into the lens, which is cheap but only as",
+                            "sharp as the screen it was sampled from.",
+                            "REAL draws the world a second time through the scope for true magnification, at the",
+                            "cost of a second world pass.",
+                            "FAKE does not work with shader packs. It reuses the frame the game already drew, and a",
+                            "shader pack leaves no point in the frame where the world is finished but the gun has",
+                            "not been drawn yet, so the lens shows the scope itself. Use REAL or OFF under shaders.",
+                            "A server can withhold this entirely, in which case OFF is used regardless.")
+                    .defineEnum("mode", PipScopeMode.OFF);
+            pipScopeResolutionScale = builder
+                    .comment(
+                            "REAL only. Resolution the second pass is kept at, relative to the screen.",
+                            "This is the sharpness of the lens image, not the cost of drawing it: the pass itself",
+                            "always runs at screen resolution and is only scaled on the way into its own texture.",
+                            "Below 1.0 the lens is visibly soft and shimmers as you turn.")
+                    .defineInRange("realResolutionScale", 1.0, 0.25, 2.0);
+            pipScopeRealMinMagnification = builder
+                    .comment(
+                            "REAL only. Magnification below which the cheap cropped image stands in for the second",
+                            "pass, which is the one setting here that actually removes work.",
+                            "A variable optic spends much of its life near the bottom of its range, so raising this",
+                            "to 2 or 3 skips the second world render most of the time. The cost is a visible step in",
+                            "sharpness as a scroll sweep crosses the value, which is why it defaults to off.",
+                            "1.0 always runs the second pass.")
+                    .defineInRange("realMinMagnification", 1.0, 1.0, 50.0);
+            pipScopeFakeSmoothSampling = builder
+                    .comment(
+                            "FAKE only. Smooth the cropped image instead of magnifying its pixels squarely.",
+                            "FAKE cannot show more detail than the screen already holds, so this does not sharpen",
+                            "anything: it only chooses how the shortfall reads. True blends between pixels, which",
+                            "looks softer but avoids the blocky edges that show up at high magnification. False",
+                            "keeps them crisp, which matches the rest of the game but grows visibly chunky as the",
+                            "magnification climbs.")
+                    .define("fakeSmoothSampling", true);
+            pipScopeRefreshEveryFrame = builder
+                    .comment(
+                            "REAL only. Draw the second pass every frame.",
+                            "If false, a still camera reuses the previous pass on alternate frames, which halves the",
+                            "cost but leaves the lens a frame behind whenever anything in it moves.")
+                    .define("realRefreshEveryFrame", true);
             builder.pop();
 
             builder.push("experimental");

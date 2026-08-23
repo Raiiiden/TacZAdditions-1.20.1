@@ -59,6 +59,14 @@ public class ModNetworking {
         );
         CHANNEL.registerMessage(
                 id++,
+                FreeAimUpdatePacket.class,
+                FreeAimUpdatePacket::encode,
+                FreeAimUpdatePacket::decode,
+                FreeAimUpdatePacket::handle,
+                Optional.of(NetworkDirection.PLAY_TO_SERVER)
+        );
+        CHANNEL.registerMessage(
+                id++,
                 ConfigSnapshotPacket.class,
                 ConfigSnapshotPacket::encode,
                 ConfigSnapshotPacket::decode,
@@ -91,6 +99,11 @@ public class ModNetworking {
 
     public static void sendLaserDot(Vec3 hitPos, int color) {
         CHANNEL.sendToServer(new LaserDotUpdatePacket(hitPos.x, hitPos.y, hitPos.z, color));
+    }
+
+    // Reported every tick the barrel moves, so the server can fire along it instead of the crosshair.
+    public static void sendFreeAim(float yawOffset, float pitchOffset) {
+        CHANNEL.sendToServer(new FreeAimUpdatePacket(yawOffset, pitchOffset));
     }
 
     public static void sendLaserToggleRequest() {

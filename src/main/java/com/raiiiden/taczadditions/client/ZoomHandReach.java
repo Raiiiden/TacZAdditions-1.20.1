@@ -12,15 +12,8 @@ import org.joml.Vector3f;
 import java.util.ArrayList;
 import java.util.List;
 
-// Reaches the off hand up to the scope while the magnification is being scrolled.
-//
-// Turning a magnification ring is a hand movement, so the arm that normally rests on the handguard
-// travels up to the optic for as long as the player keeps adjusting and settles back afterwards.
-// Purely visual: nothing here feeds back into the magnification, the hit scan or any packet.
-//
-// The travel is expressed as a translation in the lefthand_pos bone local space. Both bones are read
-// off the same model hierarchy, so composing the two chains and inverting the hand one cancels every
-// transform they share, including the first person placement and whatever the animations are doing.
+// Reaches the off hand up to the scope while the magnification is being scrolled, visuals only.
+// The travel is a translation in lefthand_pos bone space, so every shared transform cancels out.
 public final class ZoomHandReach {
 
     private static final String HAND_BONE = "lefthand_pos";
@@ -66,9 +59,8 @@ public final class ZoomHandReach {
         BedrockPart target = findTarget(model);
         if (hand == null || target == null || hand == target) return;
 
-        // Bedrock pivots are converted with the vertical axis flipped, see BedrockModel#convertPivot,
-        // so this space runs Y downward while X and Z keep the authored orientation. Negating Y here
-        // keeps the config reading as up is positive.
+        // Bedrock pivots convert with the vertical axis flipped, see BedrockModel#convertPivot, so
+        // this space runs Y downward. Negating Y keeps the config reading as up is positive.
         Matrix4f handMatrix = chainMatrix(hand);
         Vector3f delta = chainMatrix(target).transformPosition(new Vector3f());
         delta.sub(handMatrix.transformPosition(new Vector3f()));

@@ -7,14 +7,8 @@ import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Redirect;
 
-// Scales the scope model along with the swept magnification.
-//
-// The magnification itself is published by ClientAttachmentIndexZoomMixin, which the world FOV
-// already picks up. Only the scope model FOV needs its own hook, because it comes from a second
-// array that is indexed by the zoom level rather than derived from the magnification.
-//
-// This is a redirect rather than a rewrite so TaCZ keeps ownership of the aiming-progress lerp and
-// the second-order smoothing on either side of the call.
+// Scales the scope model along with the swept magnification, which needs its own hook because it
+// comes from a second array. A redirect, so TaCZ keeps its aiming lerp and smoothing either side.
 @Mixin(value = CameraSetupEvent.class, remap = false)
 public class VariableZoomFovMixin {
 

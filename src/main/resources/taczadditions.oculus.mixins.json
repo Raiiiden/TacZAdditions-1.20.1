@@ -1,0 +1,27 @@
+{
+  "required": false,
+  "minVersion": "0.8.5",
+  "package": "com.raiiiden.taczadditions.mixin.oculus",
+  "plugin": "com.raiiiden.taczadditions.mixin.oculus.OculusCompatMixinPlugin",
+  "compatibilityLevel": "JAVA_17",
+  "refmap": "taczadditions.refmap.json",
+  "client": [
+    "newly.FrameCounterMixin",
+    "newly.IrisRenderingPipelineMixin",
+    "newly.PreviousMatrixMixin",
+    "newly.RenderTargetsAccessor",
+    "newly.ShadowRenderTargetsAccessor",
+    "newly.ShaderStorageBufferHolderAccessor",
+    "newly.TimerMixin",
+    "legacy.FrameCounterMixin",
+    "legacy.IrisRenderingPipelineMixin",
+    "legacy.PreviousMatrixMixin",
+    "legacy.RenderTargetsAccessor",
+    "legacy.ShadowRenderTargetsAccessor",
+    "legacy.ShaderStorageBufferHolderAccessor",
+    "legacy.TimerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

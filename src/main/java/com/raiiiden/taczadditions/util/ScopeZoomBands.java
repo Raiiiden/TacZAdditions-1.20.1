@@ -12,17 +12,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
-// Splits a scope's authored zoom levels into continuous magnification bands.
-//
-// TaCZ keeps a scope's magnifications in a flat zoom[] array indexed by the ZoomNumber NBT tag, but
-// the entries do not all belong to the same optic. views[] selects which sight model is rendered:
-// FirstPersonRenderGunEvent maps views[i] - 1 onto BedrockAttachmentModel#getScopeViewPath. A run of
-// equal views[] values is therefore one physical sight whose magnifications can be swept smoothly,
-// while a change in views[] is a jump to a different sight and has to stay a discrete step.
-//
-// scope_lpvo_1_6 has zoom [6.25, 1.25] with views [2, 2]: one band, a real 1.25-6.25x variable optic.
-// scope_vudu has zoom [6.5, 1.35] with views [2, 1]: two single-level bands, a 6.5x scope with a
-// separate 1.35x backup sight, which must not be swept.
+// Splits a scope's authored zoom levels into continuous magnification bands: a run of equal views[]
+// entries is one physical sight and can be swept, while a change of view is a jump to another.
 public final class ScopeZoomBands {
 
     // A run of authored levels that share a sight, sorted ascending by magnification.

@@ -10,9 +10,8 @@ import org.spongepowered.asm.mixin.injection.At;
 import org.spongepowered.asm.mixin.injection.Inject;
 import org.spongepowered.asm.mixin.injection.callback.CallbackInfoReturnable;
 
-// Guns forced silenced through silencedGunIds go completely mute when their display JSON has no
-// "silence" entry, because TaCZ swaps the sound key and then drops the null lookup. Fall back to the
-// unsilenced shot instead of playing nothing.
+// Guns forced silenced through silencedGunIds go mute when their display JSON has no "silence"
+// entry, because TaCZ drops the null lookup. Fall back to the unsilenced shot instead.
 @Mixin(value = GunDisplayInstance.class, remap = false)
 public class GunDisplaySilenceSoundFallbackMixin {
     // Mirrors TaCZ's own SoundPlayManager lister, which is private.

@@ -34,9 +34,8 @@ public final class LaserDotRenderer extends RenderType {
                     .setTextureState(new TextureStateShard(TEXTURE, false, false))
                     .setTransparencyState(TRANSLUCENT_TRANSPARENCY)
                     .setDepthTestState(LEQUAL_DEPTH_TEST)
-                    // The surface dot is coplanar with the block face it sits on, so a fixed world
-                    // offset cannot win the depth test at every distance and the dot sinks into the
-                    // wall. Polygon offset biases it by depth slope instead, like block-breaking decals.
+                    // The dot is coplanar with the face it sits on, so a fixed world offset sinks
+                    // into the wall. Polygon offset biases by depth slope, like breaking decals.
                     .setLayeringState(POLYGON_OFFSET_LAYERING)
                     .setWriteMaskState(COLOR_WRITE)
                     .setCullState(NO_CULL)

@@ -2,7 +2,9 @@ package com.raiiiden.taczadditions.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.raiiiden.taczadditions.client.FreeAimHandler;
 import com.raiiiden.taczadditions.client.GunRecoilHandler;
+import com.raiiiden.taczadditions.client.ItemFovScale;
 import com.raiiiden.taczadditions.client.GunTuckHandler;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
@@ -57,12 +59,19 @@ public class GunMovementMixin {
 
     @Inject(method = "renderFirstPerson", at = @At("HEAD"))
     private void applyCustomGunSway(LocalPlayer player, ItemStack stack, ItemDisplayContext ctx, PoseStack poseStack, MultiBufferSource bufferSource, int light, float partialTick, CallbackInfo ci) {
-        if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
         if (!(stack.getItem() instanceof AbstractGunItem)) return;
 
         long currentTime = System.currentTimeMillis();
         float deltaTime = (lastFrameTime == 0) ? 0.016f : Math.min(0.05f, (currentTime - lastFrameTime) / 1000f);
         lastFrameTime = currentTime;
+
+        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTick);
+
+        // Free aim is its own feature, so it still runs with the sway below switched off.
+        FreeAimHandler.update(player, partialTick, deltaTime, aimingProgress);
+        applyFreeAim(poseStack, aimingProgress);
+
+        if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
 
         float timeFactor = deltaTime * 60f;
         float currentPitch = player.getViewXRot(partialTick);
@@ -70,8 +79,6 @@ public class GunMovementMixin {
         // Use raw frame delta to avoid amplifying frame-time jitter.
         float deltaPitch = currentPitch - lastPitch;
         float deltaYaw = currentYaw - lastYaw;
-
-        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTick);
 
         float hipYaw = get("hipfireYawMultiplier", DEFAULT_HIP_YAW_MULTIPLIER);
         float aimYaw = get("aimingYawMultiplier", DEFAULT_AIM_YAW_MULTIPLIER);
@@ -193,6 +200,25 @@ public class GunMovementMixin {
 
         lastPitch = currentPitch;
         lastYaw = currentYaw;
+    }
+
+    // The whole weapon is swung off the crosshair before any of the sway below is layered on top.
+    private static void applyFreeAim(PoseStack poseStack, float aimingProgress) {
+        if (!FreeAimHandler.hasOffset()) return;
+
+        // The offsets are world degrees, which is what the bullet leaves along, so they are
+        // converted into the model's own projection or the gun would swing further than it shoots.
+        float projection = ItemFovScale.forAiming(aimingProgress);
+        float yaw = FreeAimHandler.yawOffset() * projection;
+        float pitch = FreeAimHandler.pitchOffset() * projection;
+        float translate = TacZAdditionsConfig.CLIENT.freeAimTranslate.get().floatValue();
+
+        // Both axes are drawn the way they are reported: a positive yaw swings the gun left and a
+        // positive pitch raises it, which is the direction the shot leaves along.
+        poseStack.translate(-yaw * translate, pitch * translate, 0);
+        poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
+        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(FreeAimHandler.rollOffset()));
     }
 
     private static float get(String key, float def) {

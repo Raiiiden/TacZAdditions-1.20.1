@@ -16,5 +16,6 @@ public final class ClientConfigSyncEvents {
     @SubscribeEvent
     public static void onLoggingOut(ClientPlayerNetworkEvent.LoggingOut event) {
         ConfigSync.releaseServerValues();
+        FreeAimHandler.reset();
     }
 }
