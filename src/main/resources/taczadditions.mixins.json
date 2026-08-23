@@ -5,6 +5,7 @@
   "refmap": "taczadditions.refmap.json",
   "mixins": [
     "AttachmentCacheSilencedGunMixin",
+    "BulletWaterEffectsMixin",
     "ClientMessageRefitGunAccessor",
     "ClientMessageRefitGunLaserToggleMixin",
     "GunTuckBulletAngleMixin",

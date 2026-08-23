@@ -2,6 +2,7 @@ package com.raiiiden.taczadditions;
 
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.raiiiden.taczadditions.network.ModNetworking;
+import com.raiiiden.taczadditions.registry.ModParticles;
 import com.raiiiden.taczadditions.registry.ModSounds;
 import net.minecraftforge.eventbus.api.IEventBus;
 import net.minecraftforge.fml.ModList;
@@ -26,6 +27,7 @@ public class TaczAdditions {
     modBus.addListener(this::commonSetup);
     modBus.addListener(this::onConfigReload);
     ModSounds.SOUND_EVENTS.register(modBus);
+    ModParticles.PARTICLE_TYPES.register(modBus);
     TacZAdditionsConfig.registerConfigs();
   }
 

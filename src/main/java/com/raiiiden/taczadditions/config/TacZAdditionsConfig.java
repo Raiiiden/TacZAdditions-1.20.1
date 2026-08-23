@@ -101,6 +101,22 @@ public class TacZAdditionsConfig {
         public final SyncedValue<Double> recoilRPGHorizontal;
         public final SyncedValue<Double> recoilMGHorizontal;
 
+        // Bullet water effects
+        public final SyncedValue<Boolean> bulletWaterEffects;
+        public final SyncedValue<Double> bulletWaterTrailDensity;
+        public final SyncedValue<Double> bulletWaterSplashScale;
+        public final SyncedValue<Boolean> bulletWaterSplashByWeaponType;
+        public final SyncedValue<Double> bulletWaterSplashPistol;
+        public final SyncedValue<Double> bulletWaterSplashSmg;
+        public final SyncedValue<Double> bulletWaterSplashRifle;
+        public final SyncedValue<Double> bulletWaterSplashShotgun;
+        public final SyncedValue<Double> bulletWaterSplashSniper;
+        public final SyncedValue<Double> bulletWaterSplashMachineGun;
+        public final SyncedValue<Double> bulletWaterSplashRpg;
+        public final SyncedValue<Boolean> bulletWaterSplashSound;
+        public final SyncedValue<Double> bulletWaterEffectDistance;
+        public final SyncedValue<Integer> bulletWaterParticleBudget;
+
         public Common(ForgeConfigSpec.Builder builder) {
             builder.comment("TacZ Additions - Common Config",
                             "On a server these values are the server's: they are sent to each player on login",
@@ -382,6 +398,56 @@ public class TacZAdditionsConfig {
             recoilMGHorizontal = ConfigSync.dbl("recoilMGHorizontal", builder
                     .comment("Horizontal recoil multiplier for MGs. Negative values invert the recoil direction.")
                     .defineInRange("recoilMGHorizontal", 1.0, -10.0, 10.0));
+
+            builder.push("waterEffects");
+            bulletWaterEffects = ConfigSync.bool("bulletWaterEffects", builder
+                    .comment("If true, bullets trail bubbles underwater and throw a splash where they cross the water surface.",
+                            "The server spawns these, so every player nearby sees the same thing.")
+                    .define("bulletWaterEffects", true));
+            bulletWaterTrailDensity = ConfigSync.dbl("bulletWaterTrailDensity", builder
+                    .comment(
+                            "How closely spaced the underwater bubble trail is.",
+                            "1.0 places a bubble roughly every 0.3 blocks of travel. Higher is denser and costlier.")
+                    .defineInRange("bulletWaterTrailDensity", 1.0, 0.1, 4.0));
+            bulletWaterSplashScale = ConfigSync.dbl("bulletWaterSplashScale", builder
+                    .comment("Overall size and particle count of the surface splash. The splash already scales with bullet speed.")
+                    .defineInRange("bulletWaterSplashScale", 1.0, 0.1, 3.0));
+            bulletWaterSplashByWeaponType = ConfigSync.bool("bulletWaterSplashByWeaponType", builder
+                    .comment("If true, the splash size is nudged by the weapon type using the multipliers below.")
+                    .define("bulletWaterSplashByWeaponType", true));
+
+            builder.comment("Per weapon type splash multipliers, applied on top of bulletWaterSplashScale.",
+                            "Kept close to 1.0 on purpose: a shotgun should read heavier than a pistol,",
+                            "not throw a different effect. Set all of them to 1.0 to flatten the difference.")
+                    .push("weaponTypeScale");
+            bulletWaterSplashPistol = ConfigSync.dbl("bulletWaterSplashPistol",
+                    builder.defineInRange("pistol", 0.85, 0.1, 3.0));
+            bulletWaterSplashSmg = ConfigSync.dbl("bulletWaterSplashSmg",
+                    builder.defineInRange("smg", 0.9, 0.1, 3.0));
+            bulletWaterSplashRifle = ConfigSync.dbl("bulletWaterSplashRifle",
+                    builder.defineInRange("rifle", 1.0, 0.1, 3.0));
+            bulletWaterSplashShotgun = ConfigSync.dbl("bulletWaterSplashShotgun",
+                    builder.defineInRange("shotgun", 1.1, 0.1, 3.0));
+            bulletWaterSplashSniper = ConfigSync.dbl("bulletWaterSplashSniper",
+                    builder.defineInRange("sniper", 1.2, 0.1, 3.0));
+            bulletWaterSplashMachineGun = ConfigSync.dbl("bulletWaterSplashMachineGun",
+                    builder.defineInRange("machineGun", 1.05, 0.1, 3.0));
+            bulletWaterSplashRpg = ConfigSync.dbl("bulletWaterSplashRpg",
+                    builder.defineInRange("rpg", 1.3, 0.1, 3.0));
+            builder.pop();
+
+            bulletWaterSplashSound = ConfigSync.bool("bulletWaterSplashSound", builder
+                    .comment("If true, surface hits play a short splash sound. At most three per tick.")
+                    .define("bulletWaterSplashSound", true));
+            bulletWaterEffectDistance = ConfigSync.dbl("bulletWaterEffectDistance", builder
+                    .comment("Players further than this many blocks from the hit are not sent the particles.")
+                    .defineInRange("bulletWaterEffectDistance", 64.0, 8.0, 128.0));
+            bulletWaterParticleBudget = ConfigSync.integer("bulletWaterParticleBudget", builder
+                    .comment(
+                            "Hard cap on water particles spawned per tick across all bullets.",
+                            "Lower this if sustained automatic fire into water costs server or network time.")
+                    .defineInRange("bulletWaterParticleBudget", 600, 50, 4000));
+            builder.pop();
             builder.pop();
         }
     }
@@ -475,6 +541,9 @@ public class TacZAdditionsConfig {
         public final ForgeConfigSpec.BooleanValue pipScopeRefreshEveryFrame;
         public final ForgeConfigSpec.DoubleValue pipScopeRealMinMagnification;
         public final ForgeConfigSpec.BooleanValue pipScopeFakeSmoothSampling;
+
+        // Bullet water effects
+        public final ForgeConfigSpec.BooleanValue cullBubbleTrailBehindWater;
 
         // Experimental
         public final ForgeConfigSpec.BooleanValue magazineText;
@@ -656,8 +725,6 @@ public class TacZAdditionsConfig {
                     .comment("Maximum roll angle (degrees).")
                     .defineInRange("maxTiltAngle", 20.0, 0.0, 180.0);
 
-            builder.pop();
-
             builder.push("freeAim");
             freeAimEnabled = builder
                     .comment(
@@ -811,6 +878,16 @@ public class TacZAdditionsConfig {
                     .define("realRefreshEveryFrame", true);
             builder.pop();
 
+            builder.push("waterEffects");
+            cullBubbleTrailBehindWater = builder
+                    .comment(
+                            "If true, the underwater bubble trail is culled by the water surface, the way vanilla",
+                            "bubbles are: the trail is only visible with the camera underwater alongside it.",
+                            "If false, the trail draws through the surface so it can be read from above the water.",
+                            "Purely how it draws. Whether there is a trail at all is a server setting.")
+                    .define("cullBubbleTrailBehindWater", true);
+            builder.pop();
+
             builder.push("experimental");
             magazineText = builder
                     .comment("If true, shows floating magazine ammo text (experimental).")
@@ -818,6 +895,7 @@ public class TacZAdditionsConfig {
             enableLaserDot = builder
                     .comment("If true, renders laser dot particles when using laser attachments")
                     .define("enableLaserDot", true);
+            builder.pop();
             builder.pop();
         }
     }
