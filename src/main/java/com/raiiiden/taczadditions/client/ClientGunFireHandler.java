@@ -17,11 +17,8 @@ public class ClientGunFireHandler {
         float x = TacZAdditionsConfig.CLIENT.recoilVisualX.get().floatValue();
         float y = TacZAdditionsConfig.CLIENT.recoilVisualY.get().floatValue();
         float z = TacZAdditionsConfig.CLIENT.recoilVisualZ.get().floatValue();
-
         float xActual = (float) ((Math.random() * 2.0 - 1.0) * x);
-        float yActual = y;
-        float zActual = z;
 
-        GunRecoilHandler.trigger(xActual, yActual, zActual);
+        GunRecoilHandler.trigger(xActual, y, z);
     }
 }

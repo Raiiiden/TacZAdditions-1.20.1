@@ -13,7 +13,7 @@ import java.util.*;
 @Mod.EventBusSubscriber
 public class ServerMuzzleFlashManager {
     private static final Map<ServerLevel, Map<BlockPos, Long>> activeFlashes = new HashMap<>();
-    private static final long FLASH_DURATION_MS = 10;
+    private static final long FLASH_DURATION_MS = 5;
 
     public static void placeFlash(ServerLevel level, BlockPos pos, int lightLevel) {
         BlockPos targetPos = findValidPosition(level, pos);

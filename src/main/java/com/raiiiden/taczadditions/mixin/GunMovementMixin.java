@@ -2,11 +2,15 @@ package com.raiiiden.taczadditions.mixin;
 
 import com.mojang.blaze3d.vertex.PoseStack;
 import com.mojang.math.Axis;
+import com.raiiiden.taczadditions.client.FreeAimHandler;
 import com.raiiiden.taczadditions.client.GunRecoilHandler;
+import com.raiiiden.taczadditions.client.ItemFovScale;
+import com.raiiiden.taczadditions.client.GunTuckHandler;
 import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import com.tacz.guns.api.client.gameplay.IClientPlayerGunOperator;
 import com.tacz.guns.api.item.gun.AbstractGunItem;
 import com.tacz.guns.client.renderer.item.GunItemRendererWrapper;
+import com.tacz.guns.client.resource.GunDisplayInstance;
 import net.minecraft.client.player.LocalPlayer;
 import net.minecraft.client.renderer.MultiBufferSource;
 import net.minecraft.util.Mth;
@@ -55,20 +59,26 @@ public class GunMovementMixin {
 
     @Inject(method = "renderFirstPerson", at = @At("HEAD"))
     private void applyCustomGunSway(LocalPlayer player, ItemStack stack, ItemDisplayContext ctx, PoseStack poseStack, MultiBufferSource bufferSource, int light, float partialTick, CallbackInfo ci) {
-        if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
         if (!(stack.getItem() instanceof AbstractGunItem)) return;
 
         long currentTime = System.currentTimeMillis();
         float deltaTime = (lastFrameTime == 0) ? 0.016f : Math.min(0.05f, (currentTime - lastFrameTime) / 1000f);
         lastFrameTime = currentTime;
 
+        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTick);
+
+        // Free aim is its own feature, so it still runs with the sway below switched off.
+        FreeAimHandler.update(player, partialTick, deltaTime, aimingProgress);
+        applyFreeAim(poseStack, aimingProgress);
+
+        if (!TacZAdditionsConfig.CLIENT.enableGunMovement.get()) return;
+
         float timeFactor = deltaTime * 60f;
         float currentPitch = player.getViewXRot(partialTick);
         float currentYaw = player.getViewYRot(partialTick);
-        float deltaPitch = (currentPitch - lastPitch) * timeFactor;
-        float deltaYaw = (currentYaw - lastYaw) * timeFactor;
-
-        float aimingProgress = IClientPlayerGunOperator.fromLocalPlayer(player).getClientAimingProgress(partialTick);
+        // Use raw frame delta to avoid amplifying frame-time jitter.
+        float deltaPitch = currentPitch - lastPitch;
+        float deltaYaw = currentYaw - lastYaw;
 
         float hipYaw = get("hipfireYawMultiplier", DEFAULT_HIP_YAW_MULTIPLIER);
         float aimYaw = get("aimingYawMultiplier", DEFAULT_AIM_YAW_MULTIPLIER);
@@ -87,27 +97,38 @@ public class GunMovementMixin {
         float rollSens = get("rollSensitivity", DEFAULT_ROLL_SENSITIVITY);
         float maxRoll = get("maxTiltAngle", DEFAULT_MAX_ROLL_AIM + (DEFAULT_MAX_ROLL_HIP - DEFAULT_MAX_ROLL_AIM) * (1.0f - aimingProgress));
 
-        pitchVelocity = pitchVelocity * 0.85f + deltaPitch * drag * hipFirePitchFactor;
-        yawVelocity = yawVelocity * 0.85f + deltaYaw * drag * hipFireFactor;
-        rollVelocity = rollVelocity * 0.85f + (-yawVelocity * 0.2f * hipFireRollFactor);
+        // Time-scaled decay keeps drift consistent across frame rates.
+        float velDecay = (float) Math.pow(0.85f, timeFactor);
+        pitchVelocity = pitchVelocity * velDecay + deltaPitch * drag * hipFirePitchFactor;
+        yawVelocity = yawVelocity * velDecay + deltaYaw * drag * hipFireFactor;
+        rollVelocity = rollVelocity * velDecay + (-yawVelocity * 0.2f * hipFireRollFactor);
 
-        smoothedPitch += pitchVelocity * momentum;
-        smoothedYaw += yawVelocity * momentum;
-        smoothedRoll += rollVelocity * momentum;
+        smoothedPitch += pitchVelocity * momentum * timeFactor;
+        smoothedYaw += yawVelocity * momentum * timeFactor;
+        smoothedRoll += rollVelocity * momentum * timeFactor;
 
         smoothedPitch *= Math.pow(decay, timeFactor);
         smoothedYaw *= Math.pow(decay, timeFactor);
         smoothedRoll *= Math.pow(decay, timeFactor);
 
-        float oscillation = 0.03f * (1.0f - aimingProgress);
+        float oscillation = 0.03f * (1.0f - aimingProgress) * timeFactor;
         smoothedPitch += Math.sin(currentTime * 0.003) * oscillation;
         smoothedYaw += Math.sin(currentTime * 0.002) * oscillation;
 
-        float maxPitch = 10f + (8f * (1.0f - aimingProgress));
-        float maxYaw = 10f + (12f * (1.0f - aimingProgress));
+        float maxPitch = Mth.lerp(
+                aimingProgress,
+                TacZAdditionsConfig.CLIENT.maxHipPitch.get().floatValue(),
+                TacZAdditionsConfig.CLIENT.maxAimPitch.get().floatValue()
+        );
+
+        float maxYaw = Mth.lerp(
+                aimingProgress,
+                TacZAdditionsConfig.CLIENT.maxHipYaw.get().floatValue(),
+                TacZAdditionsConfig.CLIENT.maxAimYaw.get().floatValue()
+        );
 
         smoothedPitch = clamp(smoothedPitch, -maxPitch, maxPitch);
-        smoothedYaw = clamp(smoothedYaw, -maxYaw, maxYaw);
+        smoothedYaw = Mth.lerp(0.1f, smoothedYaw, clamp(smoothedYaw, -maxYaw, maxYaw));
         smoothedRoll = clamp(smoothedRoll, -maxRoll, maxRoll);
 
         poseStack.mulPose(Axis.XP.rotationDegrees(-smoothedPitch * DEFAULT_PITCH_SENSITIVITY));
@@ -136,8 +157,8 @@ public class GunMovementMixin {
             float strafeDrag = get("strafeSmoothing", 0.15f);
 
             // Apply smoothing with separate strafe smoothing factor
-            strafeYawVelocity = strafeYawVelocity * 0.85f + (strafeTargetYaw - smoothedStrafeYaw) * strafeDrag * timeFactor;
-            strafeRollVelocity = strafeRollVelocity * 0.85f + (strafeTargetRoll - smoothedStrafeRoll) * strafeDrag * timeFactor;
+            strafeYawVelocity = strafeYawVelocity * velDecay + (strafeTargetYaw - smoothedStrafeYaw) * strafeDrag * timeFactor;
+            strafeRollVelocity = strafeRollVelocity * velDecay + (strafeTargetRoll - smoothedStrafeRoll) * strafeDrag * timeFactor;
 
             smoothedStrafeYaw += strafeYawVelocity * momentum * timeFactor;
             smoothedStrafeRoll += strafeRollVelocity * momentum * timeFactor;
@@ -165,8 +186,39 @@ public class GunMovementMixin {
             );
         }
 
+        // --- Gun tuck ---
+        if (TacZAdditionsConfig.COMMON.enableGunTuck.get() && stack.getItem() instanceof AbstractGunItem) {
+            // Server-owned so the visual tuck matches where bullets go and cannot be tuned locally.
+            float maxDist = TacZAdditionsConfig.COMMON.tuckDistance.get().floatValue();
+            float tuckTarget = GunTuckHandler.calculateTarget(player, partialTick, maxDist);
+            // Always update — passes 0 on miss so it smoothly returns rather than snapping
+            GunTuckHandler.update(tuckTarget, deltaTime);
+        } else {
+            // Still decay toward 0 when disabled or no gun, prevents snap if toggled
+            GunTuckHandler.update(0f, deltaTime);
+        }
+
         lastPitch = currentPitch;
         lastYaw = currentYaw;
+    }
+
+    // The whole weapon is swung off the crosshair before any of the sway below is layered on top.
+    private static void applyFreeAim(PoseStack poseStack, float aimingProgress) {
+        if (!FreeAimHandler.hasOffset()) return;
+
+        // The offsets are world degrees, which is what the bullet leaves along, so they are
+        // converted into the model's own projection or the gun would swing further than it shoots.
+        float projection = ItemFovScale.forAiming(aimingProgress);
+        float yaw = FreeAimHandler.yawOffset() * projection;
+        float pitch = FreeAimHandler.pitchOffset() * projection;
+        float translate = TacZAdditionsConfig.CLIENT.freeAimTranslate.get().floatValue();
+
+        // Both axes are drawn the way they are reported: a positive yaw swings the gun left and a
+        // positive pitch raises it, which is the direction the shot leaves along.
+        poseStack.translate(-yaw * translate, pitch * translate, 0);
+        poseStack.mulPose(Axis.YP.rotationDegrees(yaw));
+        poseStack.mulPose(Axis.XP.rotationDegrees(pitch));
+        poseStack.mulPose(Axis.ZP.rotationDegrees(FreeAimHandler.rollOffset()));
     }
 
     private static float get(String key, float def) {
@@ -196,5 +248,39 @@ public class GunMovementMixin {
 
     private static float lerp(float alpha, float from, float to) {
         return from + (to - from) * (1.0f - alpha);
+    }
+
+    @Inject(
+            method = "lambda$renderFirstPerson$5",
+            at = @At(
+                    value = "INVOKE",
+                    target = "Lcom/tacz/guns/client/event/FirstPersonRenderGunEvent;applyFirstPersonGunTransform(Lnet/minecraft/client/player/LocalPlayer;Lnet/minecraft/world/item/ItemStack;Lcom/mojang/blaze3d/vertex/PoseStack;Lcom/tacz/guns/client/model/BedrockGunModel;F)V",
+                    shift = At.Shift.AFTER
+            ),
+            remap = false
+    )
+    private void applyRecoilKick(ItemStack stack, LocalPlayer player, float partialTick, PoseStack poseStack, ItemDisplayContext ctx, int light, GunDisplayInstance display, CallbackInfo ci) {
+        // Recoil kick
+        float kickAngle = TacZAdditionsConfig.CLIENT.recoilKickAngle.get().floatValue();
+        if (kickAngle != 0f) {
+            float recoilProgress = 1.0f - (System.currentTimeMillis() - GunRecoilHandler.lastRecoilTime) / 300f;
+            if (recoilProgress > 0f) {
+                recoilProgress *= recoilProgress;
+                poseStack.mulPose(Axis.XP.rotationDegrees(-kickAngle * recoilProgress));
+            }
+        }
+
+        // Gun tuck
+        if (TacZAdditionsConfig.COMMON.enableGunTuck.get() && GunTuckHandler.tuckProgress > 0f) {
+            float maxAngle = TacZAdditionsConfig.COMMON.tuckMaxAngle.get().floatValue();
+            float maxTranslate = TacZAdditionsConfig.COMMON.tuckMaxTranslate.get().floatValue();
+            float t = GunTuckHandler.tuckProgress;
+
+            float pivotShift = 0.5f; // shift pivot toward player, tune this
+            poseStack.translate(0f, 0f, -pivotShift);
+            poseStack.mulPose(Axis.XP.rotationDegrees(-maxAngle * t));
+            poseStack.translate(0f, 0f, pivotShift);
+            poseStack.translate(0f, 0f, maxTranslate * t);
+        }
     }
 }

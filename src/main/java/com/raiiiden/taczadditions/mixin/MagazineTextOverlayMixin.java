@@ -5,6 +5,7 @@ import com.mojang.math.Axis;
 import com.tacz.guns.api.item.IGun;
 import com.tacz.guns.client.model.BedrockGunModel;
 import com.tacz.guns.client.model.bedrock.BedrockPart;
+import com.raiiiden.taczadditions.config.TacZAdditionsConfig;
 import net.minecraft.client.Minecraft;
 import net.minecraft.client.gui.Font;
 import net.minecraft.client.renderer.MultiBufferSource;
@@ -26,18 +27,20 @@ public class MagazineTextOverlayMixin {
     private static final Map<ItemStack, List<Float>> recentDistances = new WeakHashMap<>();
     private static final Map<ItemStack, Float> idleDistances = new WeakHashMap<>();
     private static final Map<ItemStack, Boolean> activated = new WeakHashMap<>();
-    private static final Map<ItemStack, Long> lastLogTime = new WeakHashMap<>();
     private static final Map<ItemStack, Float> maxDistances = new WeakHashMap<>();
 
     @Inject(method = "render", at = @At("TAIL"))
     private void injectText(PoseStack poseStack, ItemStack gunItem, ItemDisplayContext context, RenderType renderType, int light, int overlay, CallbackInfo ci) {
+        if (!TacZAdditionsConfig.CLIENT.magazineText.get()) return;
+
         IGun iGun = IGun.getIGunOrNull(gunItem);
         if (iGun == null) return;
 
         BedrockGunModel model = (BedrockGunModel)(Object)this;
         BedrockPart magPart = getPartByName(model.getRootNode(), "bullet_in_mag");
         if (magPart == null) {
-            String[] fallbacks = { "mag_and_lefthand", "lefthand_and_mag", "mag_and_lh", "mag_extended_1", "mag_extended_2", "mag_extended_3", "mag_standard" };
+            String[] fallbacks = { "mag_and_lefthand", "lefthand_and_mag", "mag_and_lh",
+                    "mag_extended_1", "mag_extended_2", "mag_extended_3", "mag_standard" };
             for (String name : fallbacks) {
                 magPart = getPartByName(model.getRootNode(), name);
                 if (magPart != null) break;
@@ -46,27 +49,12 @@ public class MagazineTextOverlayMixin {
 
         BedrockPart basePart = getPartByName(model.getRootNode(), "gun_and_righthand");
         if (basePart == null) {
-            String[] fallbacks = { "righthand_and_gun", "gun", "gun_body", "body", "mag_release", "magrelease", "righthand", "righthand_pos" };
+            String[] fallbacks = { "righthand_and_gun", "gun", "gun_body", "body",
+                    "mag_release", "magrelease", "righthand", "righthand_pos" };
             for (String name : fallbacks) {
                 basePart = getPartByName(model.getRootNode(), name);
                 if (basePart != null) break;
             }
-        }
-
-        long now = System.currentTimeMillis();
-        BedrockPart root = model.getRootNode();
-        if (now - lastLogTime.getOrDefault(gunItem, 0L) > 2000) {
-            System.out.printf("Model %s part scan:%s%s%n",
-                    model,
-                    (magPart == null ? " missing magPart" : " using magPart: " + magPart.name),
-                    (basePart == null ? " missing basePart" : " using basePart: " + basePart.name)
-            );
-            if (root != null) {
-                //logAllPartPositions(root, "");
-            } else {
-                System.out.println("Root node is null.");
-            }
-            lastLogTime.put(gunItem, now);
         }
 
         if (magPart == null || basePart == null) return;
@@ -189,12 +177,4 @@ public class MagazineTextOverlayMixin {
         }
         return null;
     }
-
-//    private void logAllPartPositions(BedrockPart part, String indent) {
-//        Vector3f pos = getAnimatedPosition(part);
-//        System.out.printf("%sPart '%s' -> (%.4f, %.4f, %.4f)%n", indent, part.name, pos.x, pos.y, pos.z);
-//        for (BedrockPart child : part.children) {
-//            logAllPartPositions(child, indent + "  ");
-//        }
-//    }
 }
